@@ -60,7 +60,7 @@ def main():
     # simulated annealing
     else:
         posterior, test_acc_lst = simulated_annealing(model_type, samples, \
-            demo_file, simulator, iterator, parameters, is_range)
+            demo_file, simulator, iterator, parameters, is_range, toy=opts.toy)
 
     print(posterior)
     print(test_acc_lst)
@@ -153,7 +153,7 @@ def process_opts(opts):
 
 
 def simulated_annealing(model_type, samples, demo_file, simulator, iterator, \
-        parameters, is_range):
+        parameters, is_range, toy=False):
     """Main function that drives GAN updates"""
 
     # initialize params
@@ -176,6 +176,9 @@ def simulated_annealing(model_type, samples, demo_file, simulator, iterator, \
 
     # simulated-annealing iterations
     num_iter = NUM_ITER + len(parameters)*150 # more iterations for more params
+    # for toy example
+    if toy:
+        num_iter = 2
     for i in range(num_iter):
         print("\nITER", i)
         print("time", datetime.datetime.now().time())

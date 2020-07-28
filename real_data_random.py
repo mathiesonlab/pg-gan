@@ -6,7 +6,7 @@ Date: 7/6/20
 """
 
 # python imports
-import allel
+#import allel # TODO put back in for pre-processing real data the first time
 import h5py
 import numpy as np
 import pickle

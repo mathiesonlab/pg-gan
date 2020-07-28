@@ -226,6 +226,7 @@ def parse_args():
     parser.add_option('-r', '--is_range', type='string', help='range')
     parser.add_option('-i', '--input', type='string', help='input for plotting')
     parser.add_option('-o', '--output', type='string', help='output for plot')
+    parser.add_option('-t', action="store_true", dest="toy", help='toy example')
 
     (opts, args) = parser.parse_args()
 
