@@ -1,7 +1,8 @@
 # pg-gan
 
 This software can be used to create realistic simulated data that matches real
-population genetic data. It implements a GAN-based algorithm (Generative Adversarial Network).
+population genetic data. It implements a GAN-based algorithm (Generative Adversarial Network)
+described in the pre-print [Automatic inference of demographic parameters using Generative Adversarial Networks](https://www.biorxiv.org/content/10.1101/2020.08.05.237834v1).
 
 Dependencies:
 
