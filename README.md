@@ -33,14 +33,15 @@ Link: [scikit-allel](https://scikit-allel.readthedocs.io/en/stable/)
 
 ## Demographic models
 
-There are currently six demographic models implemented in `pg-gan` (see below for information about adding your own model).
+There are currently six demographic models implemented in `pg-gan` (see below for information about adding your own model). Use the `-m` flag
+to specify the model (required parameter).
 
-* CONST: constant population size (Ne)
-* IM: isolation-with-migration (two-population model)
-* EXP: one-population exponential growth model
-* OOA2: Out-of-Africa model with two populations (e.g. YRI/CEU or YRI/CHB)
-* POST: post Out-of-Africa split with two populations (e.g. CEU/CHB)
-* OOA3: three-population Out-of-Africa model (e.g. YRI/CEU/CHB), as specified in [Gutenkunst et al 2009](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1000695) and implemented in [stdpopsim](https://elifesciences.org/articles/54967).
+* CONST (command line `const`): constant population size (Ne)
+* IM (command line `im`): isolation-with-migration (two-population model)
+* EXP (command line `exp`): one-population exponential growth model
+* OOA2 (command line `ooa2`): Out-of-Africa model with two populations (e.g. YRI/CEU or YRI/CHB)
+* POST (command line `post_ooa`): post Out-of-Africa split with two populations (e.g. CEU/CHB)
+* OOA3 (command line `ooa3`): three-population Out-of-Africa model (e.g. YRI/CEU/CHB), as specified in [Gutenkunst et al 2009](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1000695) and implemented in [stdpopsim](https://elifesciences.org/articles/54967).
 
 See the diagram below for the parameters of IM, EXP, OOA2, and POST. Mutation (`mut`) and recombination (`reco`) can also be added to
 the list of parameters to infer.
@@ -88,7 +89,7 @@ Note: this tutorial will require [bcftools](http://samtools.github.io/bcftools/b
 the accessibility mask `20120824_strict_mask.bed`.
 
 2. Identify a set of samples for the population of interest. Here we will use CHB, and a sample file is provided above in `prep_data/CHB_gan.txt`.
-When using more than one population, make sure the samples are sorted by population (and currently equal numbers from each population are needed).
+When using more than one population, make sure the samples are sorted by population (and currently equal numbers from each population are needed). Data from all populations eventually needs to end up in the same VCF file and then the same HDF5 file.
 
 3. Create a list of VCF files to use as training data. Here we will use chromosomes 1-22 from CHB, and the list of files is provided in `prep_data/CHB_filelist.txt`.
 
@@ -151,7 +152,7 @@ python3 summary_stats.py chb_exp.out chb_exp.png -m exp -p N1,N2,growth,T1,T2 -d
 You can add your own demographic models to `pg-gan`, as long as they are implemented in `msprime`. Right now new models must be added as functions
 to `simulation.py`. Each function should return an `msprime` tree sequence. Here is an example for the CONST model. The `params` should match
 those in the `util.py` file (although more can be added as needed), and the `sample_sizes` should be a list of integers (with length matching the number
-  of populations).
+  of populations). The other parameters of the function can be ignored unless the user wants to customize them.
 
 ~~~
 def simulate_const(params, sample_sizes, L, seed, prior=[], weights=[]):
@@ -169,6 +170,17 @@ def simulate_const(params, sample_sizes, L, seed, prior=[], weights=[]):
         random_seed = seed)
 
     return ts
+~~~
+
+After adding this function, register it in the `process_opts` function of `pg_gan.py` as a new option. For one-population models use the `OnePopModel`
+discriminator, for two-population models use `TwoPopModel`, and for three-population models use `ThreePopModel`. The `sample_sizes` variable
+should be a list of integers matching the number of haplotypes in each population.
+
+~~~
+if opts.model == 'const':
+    sample_sizes = [198]
+    discriminator = discriminators.OnePopModel()
+    simulator = simulation.simulate_const
 ~~~
 
 ## General notes

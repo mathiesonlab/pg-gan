@@ -131,8 +131,8 @@ def main():
         fsc=True
 
     # real
-    real_matrices = iterator.real_batch(NUM_TRIAL, True, neg1=False)
-    real_matrices_region = iterator.real_batch(NUM_TRIAL, True, neg1=False,
+    real_matrices = iterator.real_batch(NUM_TRIAL, neg1=False)
+    real_matrices_region = iterator.real_batch(NUM_TRIAL, neg1=False,
         region_len=True)
     print("got through real data")
 

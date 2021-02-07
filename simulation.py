@@ -232,7 +232,8 @@ def simulate_postOOA(params, sample_sizes, L, seed, prior=[], weights=[]):
     # condense params
     T1 = params.T1.value
     T2 = params.T2.value
-    m_EU_AS = params.m_EU_AS.value
+    mig = params.mig.value
+    #m_EU_AS = params.m_EU_AS.value
 
     population_configurations = [
         msprime.PopulationConfiguration(sample_size=sample_sizes[0], \
@@ -241,26 +242,26 @@ def simulate_postOOA(params, sample_sizes, L, seed, prior=[], weights=[]):
             initial_size = params.N2.value)] # CHB is second
 
     # symmetric migration
-    migration_matrix=[[0, m_EU_AS],
-                      [m_EU_AS, 0]]
+    #migration_matrix=[[0, m_EU_AS],
+    #                  [m_EU_AS, 0]]
 
     # directional (pulse)
-    '''if mig >= 0:
+    if mig >= 0:
         # migration from pop 1 into pop 0 (back in time)
         mig_event = msprime.MassMigration(time = T2/2, source = 1, \
             destination = 0, proportion = abs(mig))
     else:
         # migration from pop 0 into pop 1 (back in time)
         mig_event = msprime.MassMigration(time = T2/2, source = 0, \
-            destination = 1, proportion = abs(mig))'''
+            destination = 1, proportion = abs(mig))
 
     demographic_events = [
-        #mig_event,
+        mig_event,
 		# move all in deme 1 to deme 0
 		msprime.MassMigration(time = T2, source = 1, destination = 0, \
             proportion = 1.0),
-        # set mig rate to zero
-        msprime.MigrationRateChange(time=T2, rate=0),
+        # set mig rate to zero (need if using migration_matrix)
+        #msprime.MigrationRateChange(time=T2, rate=0),
         # ancestral bottleneck
         msprime.PopulationParametersChange(time=T2, \
             initial_size=params.N1.value, population_id=0),
@@ -272,7 +273,7 @@ def simulate_postOOA(params, sample_sizes, L, seed, prior=[], weights=[]):
     ts = msprime.simulate(
 		population_configurations = population_configurations,
 		demographic_events = demographic_events,
-        migration_matrix = migration_matrix,
+        #migration_matrix = migration_matrix,
 		mutation_rate = params.mut.value,
 		length = L,
 		recombination_rate = reco,
