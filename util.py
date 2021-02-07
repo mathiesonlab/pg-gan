@@ -1,7 +1,7 @@
 """
 Utility functions and classes (including default parameters).
 Author: Sara Mathieson
-Date: 7/8/20
+Date: 2/4/21
 """
 
 import numpy as np
@@ -18,7 +18,7 @@ class Parameter:
         self.min = min
         self.max = max
         self.name = name
-        self.proposal_width = (self.max - self.min)/10 # heuristic
+        self.proposal_width = (self.max - self.min)/15 # heuristic
 
     def __str__(self):
         s = '\t'.join(["NAME", "VALUE", "MIN", "MAX"]) + '\n'
@@ -42,9 +42,18 @@ class Parameter:
         return max(value, self.min)
 
     def proposal(self, curr_value, multiplier):
-        # normal around current value (make sure don't go outside bounds)
+        if multiplier <= 0: # last iter
+            return curr_value
+
+        # normal around current value (make sure we don't go outside bounds)
         new_value = norm(curr_value, self.proposal_width*multiplier).rvs()
-        return self.fit_to_range(new_value)
+        new_value = self.fit_to_range(new_value)
+        # if the parameter hits the min or max it tends to get stuck
+        if new_value == curr_value or new_value == self.min or new_value == \
+            self.max:
+            return self.proposal(curr_value, multiplier) # recurse
+        else:
+            return new_value
 
     def proposal_range(self, curr_lst, multiplier):
         new_min = self.fit_to_range(norm(curr_lst[0], self.proposal_width * \
@@ -58,12 +67,9 @@ class Parameter:
 class ParamSet:
 
     def __init__(self):
-        # ooa
-        self.N_A = Parameter(7300, 1000, 20000, "N_A")
-        self.N_B = Parameter(2100, 1000, 20000, "N_B")
 
         # default Ne and reco and mut
-        self.Ne = Parameter(10000, 1000, 20000, "Ne")
+        self.Ne = Parameter(10000, 1000, 30000, "Ne")
         self.reco = Parameter(1.25e-8, 1e-9, 1e-7, "reco")
         self.mut = Parameter(1.25e-8, 1e-9, 1e-7, "mut")
 
@@ -84,9 +90,27 @@ class ParamSet:
         self.T1 = Parameter(2000, 1500, 5000, "T1")
         self.T2 = Parameter(350, 100, 1500, "T2")
 
-        self.all = [self.N_A, self.N_B, self.Ne, self.reco, self.mut, \
+        # ooa3
+        self.N_A = Parameter(7300, 1000, 30000, "N_A")
+        self.N_B = Parameter(2100, 1000, 20000, "N_B")
+        self.N_AF = Parameter(12300, 1000, 40000, "N_AF")
+        self.N_EU0 = Parameter(1000, 100, 20000, "N_EU0")
+        self.N_AS0 = Parameter(510, 100, 20000, "N_AS0")
+        self.r_EU = Parameter(0.004, 0.0, 0.05, "r_EU")
+        self.r_AS = Parameter(0.0055, 0.0, 0.05, "r_AS")
+        self.T_AF = Parameter(8800, 8000, 15000, "T_AF")
+        self.T_B = Parameter(5600, 2000, 8000, "T_B")
+        self.T_EU_AS = Parameter(848, 100, 2000, "T_EU_AS")
+        self.m_AF_B = Parameter(25e-5, 0.0, 0.01, "m_AF_B")
+        self.m_AF_EU = Parameter(3e-5, 0.0,  0.01, "m_AF_EU")
+        self.m_AF_AS = Parameter(1.9e-5, 0.0, 0.01, "m_AF_AS")
+        self.m_EU_AS = Parameter(9.6e-5, 0.0, 0.01, "m_EU_AS")
+
+        self.all = [self.Ne, self.reco, self.mut, \
             self.N_anc, self.T_split, self.mig, self.N1, self.N2, self.growth, \
-            self.N3, self.T1, self.T2]
+            self.N3, self.T1, self.T2, self.N_A, self.N_B, self.N_AF, \
+            self.N_EU0, self.N_AS0, self.r_EU, self.r_AS, self.T_AF, self.T_B, \
+            self.T_EU_AS, self.m_AF_B, self.m_AF_EU, self.m_AF_AS, self.m_EU_AS]
 
     def update(self, names, values):
         """Based on generator proposal, update desired param values"""
@@ -96,11 +120,7 @@ class ParamSet:
             param = names[j]
 
             # go through all params
-            if param == "N_A":
-                self.N_A.value = values[j]
-            elif param == "N_B":
-                self.N_B.value = values[j]
-            elif param == "Ne":
+            if param == "Ne":
                 self.Ne.value = values[j]
             elif param == "reco":
                 self.reco.value = values[j]
@@ -124,6 +144,34 @@ class ParamSet:
                 self.T1.value = values[j]
             elif param == "T2":
                 self.T2.value = values[j]
+            elif param == "N_A":
+                self.N_A.value = values[j]
+            elif param == "N_B":
+                self.N_B.value = values[j]
+            elif param == "N_AF":
+                self.N_AF.value = values[j]
+            elif param == "N_EU0":
+                self.N_EU0.value = values[j]
+            elif param == "N_AS0":
+                self.N_AS0.value = values[j]
+            elif param == "r_EU":
+                self.r_EU.value = values[j]
+            elif param == "r_AS":
+                self.r_AS.value = values[j]
+            elif param == "T_AF":
+                self.T_AF.value = values[j]
+            elif param == "T_B":
+                self.T_B.value = values[j]
+            elif param == "T_EU_AS":
+                self.T_EU_AS.value = values[j]
+            elif param == "m_AF_B":
+                self.m_AF_B.value = values[j]
+            elif param == "m_AF_EU":
+                self.m_AF_EU.value = values[j]
+            elif param == "m_AF_AS":
+                self.m_AF_AS.value = values[j]
+            elif param == "m_EU_AS":
+                self.m_EU_AS.value = values[j]
             else:
                 sys.exit(param + " is not a recognized parameter.")
 
@@ -141,14 +189,14 @@ def parse_params(param_input, all_params):
 
     return parameters
 
-def filter_func(x, rate):
+def filter_func(x, rate): # currently not used
     """Keep non-singletons. If singleton, filter at given rate"""
     # TODO since we haven't done major/minor yet, might want to add != n-1 too
     if np.sum(x) != 1:
         return True
     return np.random.random() >= rate # keep (1-rate) of singletons
 
-def process_gt_dist(gt_matrix, dist_vec, S, filter=False, rate=None):
+def process_gt_dist(gt_matrix, dist_vec, S, filter=False, rate=None, neg1=True):
     """
     Take in a genotype matrix and vector of inter-SNP distances. Return a 3D
     numpy array of the given n (haps) and S (SNPs) and 2 channels.
@@ -162,40 +210,59 @@ def process_gt_dist(gt_matrix, dist_vec, S, filter=False, rate=None):
         gt_matrix = gt_matrix[singleton_mask]
         dist_vec = np.array(dist_vec)[singleton_mask]
 
-    n = gt_matrix.shape[1]
-    if gt_matrix.shape[0] != len(dist_vec):
-        print("gt", gt_matrix.shape[0], "dist", len(dist_vec))
-    assert gt_matrix.shape[0] == len(dist_vec)
-    region = np.zeros((n, S, 2), dtype=np.float32)
     num_SNPs = gt_matrix.shape[0] # SNPs x n
+    n = gt_matrix.shape[1]
+    if S == None:
+        S = num_SNPs # for region_len fixed
+
+    # double check
+    if num_SNPs != len(dist_vec):
+        print("gt", num_SNPs, "dist", len(dist_vec))
+    assert num_SNPs == len(dist_vec)
+
+    # set up region
+    region = np.zeros((n, S, 2), dtype=np.float32)
+
     mid = num_SNPs//2
     half_S = S//2
+    if S % 2 == 1: # odd
+        other_half_S = half_S+1
+    else:
+        other_half_S = half_S
 
     # enough SNPs, take middle portion
     if mid >= half_S:
-        minor = major_minor(gt_matrix[mid-half_S:mid+half_S,:].transpose())
+        minor = major_minor(gt_matrix[mid-half_S:mid+ \
+            other_half_S,:].transpose(), neg1)
         region[:,:,0] = minor
-        distances = np.vstack([np.copy(dist_vec[mid-half_S:mid+half_S]) for k \
-            in range(n)])
+        distances = np.vstack([np.copy(dist_vec[mid-half_S:mid+other_half_S]) \
+            for k in range(n)])
         region[:,:,1] = distances
 
     # not enough SNPs, need to center-pad
     else:
-        minor = major_minor(gt_matrix.transpose())
+        print("NOT ENOUGH SNPS", num_SNPs)
+        print(num_SNPs, S, mid, half_S)
+        minor = major_minor(gt_matrix.transpose(), neg1)
         region[:,half_S-mid:half_S-mid+num_SNPs,0] = minor
         distances = np.vstack([np.copy(dist_vec) for k in range(n)])
         region[:,half_S-mid:half_S-mid+num_SNPs,1] = distances
 
     return region # n X SNPs X 2
 
-def major_minor(matrix):
+def major_minor(matrix, neg1):
     """Note that matrix.shape[1] may not be S if we don't have enough SNPs"""
     n = matrix.shape[0]
     for j in range(matrix.shape[1]):
         if np.count_nonzero(matrix[:,j] > 0) > (n/2): # count the 1's
             matrix[:,j] = 1 - matrix[:,j]
+
     # option to convert from 0/1 to -1/+1
-    #matrix[matrix == 0] = -1
+    if neg1:
+        matrix[matrix == 0] = -1
+    # residual numbers higher than one may remain even though we restricted to
+    # biallelic
+    #matrix[matrix > 1] = 1 # removing since we filter in VCF
     return matrix
 
 def prep_real(gt, snp_start, snp_end, indv_start, indv_end):
@@ -217,20 +284,21 @@ def parse_args():
     """Parse command line arguments."""
     parser = optparse.OptionParser(description='PG-GAN entry point')
 
-    parser.add_option('-m', '--model', type='string', \
-        help='ooa, im, yri, ceu, or chb')
-    parser.add_option('-s', '--sim_real', type='string', help='sim or real')
+    parser.add_option('-m', '--model', type='string',help='exp, im, ooa2, ooa3')
     parser.add_option('-p', '--params', type='string', \
         help='comma separated parameter list')
-    parser.add_option('-g', '--grid', type='string', help='grid, or sa')
-    parser.add_option('-r', '--is_range', type='string', help='range')
-    parser.add_option('-i', '--input', type='string', help='input for plotting')
-    parser.add_option('-o', '--output', type='string', help='output for plot')
+    parser.add_option('-d', '--data_h5', type='string', help='real data file')
+    parser.add_option('-b', '--bed', type='string', help='bed file (mask)')
+    parser.add_option('-r', '--reco_folder', type='string', \
+        help='recombination maps')
+    parser.add_option('-g', action="store_true", dest="grid",help='grid search')
     parser.add_option('-t', action="store_true", dest="toy", help='toy example')
+    parser.add_option('-s', '--seed', type='int', default=1833, \
+        help='seed for RNG')
 
     (opts, args) = parser.parse_args()
 
-    mandatories = ['model','sim_real','params','grid']
+    mandatories = ['model','params']
     for m in mandatories:
         if not opts.__dict__[m]:
             print('mandatory option ' + m + ' is missing\n')
@@ -311,6 +379,6 @@ if __name__ == "__main__":
     dist_vec = [0.3, 0.2, 0.4, 0.5, 0.1, 0.2]
 
     print(a)
-    print(major_minor(a))
+    print(major_minor(a, neg1=True))
 
-    process_gt_dist(a, dist_vec, 4, filter=True)
+    process_gt_dist(a, dist_vec, 4, filter=True, rate=0.3)

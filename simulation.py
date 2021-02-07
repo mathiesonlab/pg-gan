@@ -1,7 +1,7 @@
 """
 Simulate data for training or testing using msprime.
 Author: Sara Matheison, Zhanpeng Wang, Jiaping Wang
-Date: 7/16/20
+Date: 2/4/21
 """
 
 # python imports
@@ -12,6 +12,13 @@ import random
 import sys
 import time
 
+from numpy.random import default_rng
+
+# from stdpopsim
+import sps.engines
+import sps.species
+import sps.HomSap
+
 # our imports
 import real_data_random
 import util
@@ -20,96 +27,96 @@ import util
 # SIMULATION
 ################################################################################
 
-class Simulator:
+class Generator:
 
-    def __init__(self, sim_real, simulator, param_names, sample_sizes, \
-            num_snps, L):
-        self.sim_real = sim_real
+    def __init__(self, simulator, param_names, sample_sizes, num_snps, L, seed,\
+        mirror_real=False, reco_folder="", filter=False):
         self.simulator = simulator
         self.param_names = param_names
         self.sample_sizes = sample_sizes
+        self.num_samples = sum(sample_sizes)
         self.num_snps = num_snps
         self.L = L
+        self.rng = default_rng(seed)
+        self.curr_params = None
 
-        # for real data, use HapMap
+        # for real data, use HapMap. this also turns on singleton filtering
         self.prior = []
         self.weights = []
-        if sim_real == "real":
-            files = [real_data_random.BIG_DATA+"genetic_map_GRCh37_chr" + \
-                str(i) + ".txt" for i in range(1,23)]
+        self.filter = filter # for singletons
+        if mirror_real and reco_folder != None:
+            files = [reco_folder + "genetic_map_GRCh37_chr" + str(i) + ".txt" \
+                for i in range(1,23)]
             self.prior, self.weights = util.parse_hapmap_empirical_prior(files)
 
-
-    def simulate_batch(self, num_data, fake_values):
-
-        # initialize 4D matrix (two channels for distances)
-        all_regions = np.zeros((num_data, sum(self.sample_sizes), \
-            self.num_snps, 2), dtype=np.float32) # two channels
-        # initialize labels (one-hot, real/fake)
-        all_labels = np.zeros((num_data, 2), dtype=np.float32) # two classes
-
-        # set up parameters for real and fake
-        real_params = util.ParamSet()
-        sim_params = util.ParamSet()
-        sim_params.update(self.param_names, fake_values)
-
-        # simulate each region
-        for i in range(num_data):
-
-            # decide real or fake
-            fake = np.random.randint(0,2)
-
-            if fake >= 1: # label 1 (sim)
-                all_regions[i] = self.simulator(sim_params, self.sample_sizes, \
-                    self.num_snps, self.L)
-            else: # label 0 (real)
-                all_regions[i] = self.simulator(real_params, self.sample_sizes,\
-                    self.num_snps, self.L)
-
-            # compute label
-            label = np.zeros(2)
-            label[fake] = 1
-            all_labels[i] = label
-
-        return all_regions, all_labels
-
-    def simulate_batch_real(self, num_data, fake_values, real_iterator, \
-        is_train):
+    def simulate_batch(self, batch_size, params=[], real=False, neg1=True):
 
         # initialize 4D matrix (two channels for distances)
-        all_regions = np.zeros((num_data, sum(self.sample_sizes), \
-            self.num_snps, 2), dtype=np.float32) # two channels
-        # initialize labels (one-hot, real/fake)
-        all_labels = np.zeros((num_data, 2), dtype=np.float32) # two classes
+        if self.num_snps == None:
+            regions = []
+        else:
+            regions = np.zeros((batch_size, self.num_samples, self.num_snps, \
+                2), dtype=np.float32) # two channels
 
-        # set up parameters for simulations
+        # set up parameters
         sim_params = util.ParamSet()
-        sim_params.update(self.param_names, fake_values)
+        if real:
+            pass # keep orig for "fake" real
+        elif params == []:
+            sim_params.update(self.param_names, self.curr_params)
+        else:
+            sim_params.update(self.param_names, params)
 
         # simulate each region
-        for i in range(num_data):
+        for i in range(batch_size):
+            seed = self.rng.integers(1,high=2**32) # like GAN "noise"
 
-            # decide real or fake
-            fake = np.random.randint(0,2)
-            if fake >= 1: # label 1 (sim)
-                all_regions[i] = self.simulator(sim_params, self.sample_sizes, \
-                    self.num_snps, self.L, prior=self.prior, \
-                    weights=self.weights)
-            else: # label 0 (real)
-                all_regions[i] = real_iterator.real_region(is_train)
+            ts = self.simulator(sim_params, self.sample_sizes, self.L, seed, \
+                prior=self.prior, weights=self.weights)
+            region = prep_region(ts, self.num_snps, self.L, self.filter, neg1)
 
-            # compute label
-            label = np.zeros(2)
-            label[fake] = 1
-            all_labels[i] = label
+            if self.num_snps == None:
+                regions.append(region)
+            else:
+                regions[i] = region
 
-        return all_regions, all_labels
+        return regions
+
+    def real_batch(self, batch_size, is_train): # ignore is_train
+        return self.simulate_batch(batch_size, real=True)
+
+    def update_params(self, new_params):
+        self.curr_params = new_params
 
 def draw_background_rate_from_prior(prior_rates, prob):
     return np.random.choice(prior_rates, p=prob)
 
-def simulate_im(params, sample_sizes, num_snps, L):
+def prep_region(ts, num_snps, L, filter, neg1):
+    """Gets simulated data ready"""
+    gt_matrix = ts.genotype_matrix().astype(float)
+    snps_total = gt_matrix.shape[0]
+
+    positions = [round(variant.site.position) for variant in ts.variants()]
+    assert len(positions) == snps_total
+    dist_vec = [0] + [(positions[j+1] - positions[j])/L for j in \
+        range(snps_total-1)]
+
+    # when mirroring real data
+    if filter:
+        return util.process_gt_dist(gt_matrix, dist_vec, num_snps, filter=True,\
+            rate=0.3, neg1=neg1)
+    else:
+        return util.process_gt_dist(gt_matrix, dist_vec, num_snps, neg1=neg1)
+
+def simulate_im(params, sample_sizes, L, seed, prior=[], weights=[]):
     """Note this is a 2 population model"""
+    assert len(sample_sizes) == 2
+
+    # sample reco or use value
+    if prior != []:
+        reco = draw_background_rate_from_prior(prior, weights)
+    else:
+        reco = params.reco.value
 
     # condense params
     N1 = params.N1.value
@@ -146,12 +153,6 @@ def simulate_im(params, sample_sizes, num_snps, L):
         msprime.PopulationParametersChange(time=T_split, initial_size=N_anc, \
             population_id=0)
 	]
-    '''dd = msprime.DemographyDebugger(
-	       	population_configurations=population_configurations,
-        	migration_matrix=mig_matrix,
-        	demographic_events=demographic_events)
-
-    dd.print_history()'''
 
     # simulate tree sequence
     ts = msprime.simulate(
@@ -159,20 +160,14 @@ def simulate_im(params, sample_sizes, num_snps, L):
 		demographic_events = demographic_events,
 		mutation_rate = params.mut.value,
 		length = L,
-		recombination_rate = params.reco.value)
+		recombination_rate = reco,
+        random_seed = seed)
 
-    gt_matrix = ts.genotype_matrix().astype(float)
-    snps_total = gt_matrix.shape[0]
+    return ts
 
-    positions = [round(variant.site.position) for variant in ts.variants()]
-    assert len(positions) == snps_total
-    dist_vec = [0] + [(positions[j+1] - positions[j])/L for j in \
-        range(snps_total-1)]
-
-    return util.process_gt_dist(gt_matrix, dist_vec, num_snps)
-
-def simulate_ooa2(params, sample_sizes, num_snps, L, prior=[], weights=[]):
+def simulate_ooa2(params, sample_sizes, L, seed, prior=[], weights=[]):
     """Note this is a 2 population model"""
+    assert len(sample_sizes) == 2
 
     # sample reco or use value
     if prior != []:
@@ -213,32 +208,81 @@ def simulate_ooa2(params, sample_sizes, num_snps, L, prior=[], weights=[]):
         msprime.PopulationParametersChange(time=T1, \
             initial_size=params.N_anc.value, population_id=0)
 	]
-    '''dd = msprime.DemographyDebugger(
-	       	population_configurations=population_configurations,
-        	#migration_matrix=migration_matrix,
-        	demographic_events=demographic_events)
-
-    dd.print_history()'''
 
     ts = msprime.simulate(
 		population_configurations = population_configurations,
 		demographic_events = demographic_events,
 		mutation_rate = params.mut.value,
 		length = L,
-		recombination_rate = reco)
+		recombination_rate = reco,
+        random_seed = seed)
 
-    gt_matrix = ts.genotype_matrix().astype(float)
-    snps_total = gt_matrix.shape[0]
+    return ts
 
-    positions = [round(variant.site.position) for variant in ts.variants()]
-    assert len(positions) == snps_total
-    dist_vec = [0] + [(positions[j+1] - positions[j])/L for j in \
-        range(snps_total-1)]
+def simulate_postOOA(params, sample_sizes, L, seed, prior=[], weights=[]):
+    """Note this is a 2 population model for CEU/CHB split"""
+    assert len(sample_sizes) == 2
 
-    return util.process_gt_dist(gt_matrix, dist_vec, num_snps)
+    # sample reco or use value
+    if prior != []:
+        reco = draw_background_rate_from_prior(prior, weights)
+    else:
+        reco = params.reco.value
 
-def simulate_exp(params, sample_sizes, num_snps, L, prior=[], weights=[]):
+    # condense params
+    T1 = params.T1.value
+    T2 = params.T2.value
+    m_EU_AS = params.m_EU_AS.value
+
+    population_configurations = [
+        msprime.PopulationConfiguration(sample_size=sample_sizes[0], \
+            initial_size = params.N3.value), # CEU is first
+        msprime.PopulationConfiguration(sample_size=sample_sizes[1], \
+            initial_size = params.N2.value)] # CHB is second
+
+    # symmetric migration
+    migration_matrix=[[0, m_EU_AS],
+                      [m_EU_AS, 0]]
+
+    # directional (pulse)
+    '''if mig >= 0:
+        # migration from pop 1 into pop 0 (back in time)
+        mig_event = msprime.MassMigration(time = T2/2, source = 1, \
+            destination = 0, proportion = abs(mig))
+    else:
+        # migration from pop 0 into pop 1 (back in time)
+        mig_event = msprime.MassMigration(time = T2/2, source = 0, \
+            destination = 1, proportion = abs(mig))'''
+
+    demographic_events = [
+        #mig_event,
+		# move all in deme 1 to deme 0
+		msprime.MassMigration(time = T2, source = 1, destination = 0, \
+            proportion = 1.0),
+        # set mig rate to zero
+        msprime.MigrationRateChange(time=T2, rate=0),
+        # ancestral bottleneck
+        msprime.PopulationParametersChange(time=T2, \
+            initial_size=params.N1.value, population_id=0),
+        # ancestral size
+        msprime.PopulationParametersChange(time=T1, \
+            initial_size=params.N_anc.value, population_id=0)
+	]
+
+    ts = msprime.simulate(
+		population_configurations = population_configurations,
+		demographic_events = demographic_events,
+        migration_matrix = migration_matrix,
+		mutation_rate = params.mut.value,
+		length = L,
+		recombination_rate = reco,
+        random_seed = seed)
+
+    return ts
+
+def simulate_exp(params, sample_sizes, L, seed, prior=[], weights=[]):
     """Note this is a 1 population model"""
+    assert len(sample_sizes) == 1
 
     # sample reco or use value
     if prior != []:
@@ -259,31 +303,18 @@ def simulate_exp(params, sample_sizes, num_snps, L, prior=[], weights=[]):
 		msprime.PopulationParametersChange(time=params.T1.value, \
             initial_size=params.N1.value)
 	]
-    '''dd = msprime.DemographyDebugger(
-	       	#population_configurations=population_configurations,
-        	#migration_matrix=migration_matrix,
-        	demographic_events=demographic_events)
-
-    dd.print_history()'''
 
     ts = msprime.simulate(sample_size = sum(sample_sizes),
 		demographic_events = demographic_events,
 		mutation_rate = params.mut.value,
 		length = L,
-		recombination_rate = reco)
+		recombination_rate = reco,
+        random_seed = seed)
 
-    gt_matrix = ts.genotype_matrix().astype(float)
-    snps_total = gt_matrix.shape[0]
+    return ts
 
-    positions = [round(variant.site.position) for variant in ts.variants()]
-    assert len(positions) == snps_total
-    dist_vec = [0] + [(positions[j+1] - positions[j])/L for j in \
-        range(snps_total-1)]
-
-    return util.process_gt_dist(gt_matrix, dist_vec, num_snps, filter=False)
-
-
-def simulate_const(params, sample_sizes, num_snps, L, prior=[], weights=[]):
+def simulate_const(params, sample_sizes, L, seed, prior=[], weights=[]):
+    assert len(sample_sizes) == 1
 
     # sample reco or use value
     if prior != []:
@@ -293,71 +324,57 @@ def simulate_const(params, sample_sizes, num_snps, L, prior=[], weights=[]):
 
     # simulate data
     ts = msprime.simulate(sample_size=sum(sample_sizes), Ne=params.Ne.value, \
-        length=L, mutation_rate=params.mut.value, recombination_rate=reco)
+        length=L, mutation_rate=params.mut.value, recombination_rate=reco, \
+        random_seed = seed)
 
-    gt_matrix = ts.genotype_matrix().astype(float)
-    snps_total = gt_matrix.shape[0]
+    return ts
 
-    positions = [round(variant.site.position) for variant in ts.variants()]
-    assert len(positions) == snps_total
-    dist_vec = [0] + [(positions[j+1] - positions[j])/L for j in \
-        range(snps_total-1)]
+def simulate_ooa3(params, sample_sizes, L, seed, prior=[], weights=[]):
+    """From OOA3 as implemented in stdpopsim"""
+    assert len(sample_sizes) == 3
 
-    return util.process_gt_dist(gt_matrix, dist_vec, num_snps)
+    sp = sps.species.get_species("HomSap")
+
+    mult = L/141213431 # chr9
+    contig = sp.get_contig("chr9",length_multiplier=mult) # TODO vary the chrom
+
+    # 14 params
+    N_A = params.N_A.value
+    N_B = params.N_B.value
+    N_AF = params.N_AF.value
+    N_EU0 = params.N_EU0.value
+    N_AS0 = params.N_AS0.value
+    r_EU = params.r_EU.value
+    r_AS = params.r_AS.value
+    T_AF = params.T_AF.value
+    T_B = params.T_B.value
+    T_EU_AS = params.T_EU_AS.value
+    m_AF_B = params.m_AF_B .value
+    m_AF_EU = params.m_AF_EU.value
+    m_AF_AS = params.m_AF_AS.value
+    m_EU_AS = params.m_EU_AS.value
+
+    model = sps.HomSap.ooa_3(N_A, N_B, N_AF, N_EU0, N_AS0, r_EU, r_AS, T_AF, \
+        T_B, T_EU_AS, m_AF_B, m_AF_EU, m_AF_AS, m_EU_AS)
+    samples = model.get_samples(sample_sizes[0], sample_sizes[1], \
+        sample_sizes[2]) #['YRI', 'CEU', 'CHB']
+    engine = sps.engines.get_engine('msprime')
+    ts = engine.simulate(model, contig, samples)
+
+    return ts
 
 # testing
 if __name__ == "__main__":
 
-    batch_size = 100
+    batch_size = 50
     S = 36
     R = 50000
+    SEED = 1833
+    params = util.ParamSet()
 
-    ########
-    # SIMS #
-    ########
-
-    print("sim ooa")
-    ss = [20,20,20]
-    sim_ooa = Simulator("sim", simulate_ooa, ["N_A", "N_B"], ss, S, R)
-    all_regions, all_labels = sim_ooa.simulate_batch(batch_size, [1000, 4000])
-    print("x", all_regions.shape)
-    print("y", all_labels.shape)
-
-    print("sim im")
-    ss = [20,20]
-    sim_im = Simulator("sim", simulate_im, ["N_anc", "T_split"], ss, S, R)
-    all_regions, all_labels = sim_im.simulate_batch(batch_size, [16000, 4000])
-    print("x", all_regions.shape)
-    print("y", all_labels.shape)
-
-    ########
-    # REAL #
-    ########
-
-    region_file = real_data_random.BIG_DATA + "ceu_s36.npy"
-    ss = [0,198,0]
-    iterator = real_data_random.RealDataRandomIterator(ss, S, R, region_file, \
-        num_test=20)
-
+    # quick test
     print("sim exp")
-    sim_im = Simulator("real", simulate_exp, ["N1", "T1"], ss, S, R)
-    all_regions, all_labels = sim_im.simulate_batch_real(batch_size, [16000, \
-        4000], iterator, True)
-    print("x", all_regions.shape)
-    print("y", all_labels.shape)
-
-    print("sim const")
-    sim_im = Simulator("real", simulate_const, ["Ne"], ss, S, R)
-    all_regions, all_labels = sim_im.simulate_batch_real(batch_size, [16000], \
-        iterator, True)
-    print("x", all_regions.shape)
-    print("y", all_labels.shape)
-
-    # TODO fix this one (wrong iterator, need two population)
-    print("sim ooa2")
-    ss = [20,20]
-    sim_im = Simulator("real", simulate_ooa2, ["N_anc", "T1"], ss, S, R)
-    all_regions, all_labels = sim_im.simulate_batch_real(batch_size, [16000, \
-        4000], iterator, True)
-    print("x", all_regions.shape)
-    print("y", all_labels.shape)
+    generator = Generator(simulate_exp, ["N1", "T1"], [20], S, R, SEED)
+    generator.update_params([params.N1.value, params.T1.value])
+    mini_batch = generator.simulate_batch(50)
+    print("x", mini_batch.shape)

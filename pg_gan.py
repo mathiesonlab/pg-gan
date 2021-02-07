@@ -1,10 +1,7 @@
 """
-Application entry point for PG-GAN. Options include:
--grid search
--simulated annealing
-
+Application entry point for PG-GAN.
 Author: Sara Mathieson, Zhanpeng Wang, Jiaping Wang
-Date 7/25/20
+Date 2/4/21
 """
 
 # python imports
@@ -14,9 +11,10 @@ import numpy as np
 import random
 import sys
 import tensorflow as tf
+from scipy.optimize import basinhopping
 
 # our imports
-import models
+import discriminators
 import real_data_random
 import simulation
 import util
@@ -24,18 +22,16 @@ import util
 from real_data_random import Region
 
 # globals for simulated annealing
-NUM_ITER = 200
+NUM_ITER = 300
 BATCH_SIZE = 50
-NUM_TEST = 500
-NUM_BATCH = 200
+NUM_BATCH = 100
 print("NUM_ITER", NUM_ITER)
 print("BATCH_SIZE", BATCH_SIZE)
-print("NUM_TEST", NUM_TEST)
 print("NUM_BATCH", NUM_BATCH)
 
 # globals for data
 NUM_SNPS = 36       # number of seg sites, should be divisible by 4
-L = 50000           # length of each region
+L = 50000           # heuristic to get enough SNPs for simulations
 NUM_CLASSES = 2     # "real" vs "simulated"
 NUM_CHANNELS = 2    # SNPs and distances
 print("NUM_SNPS", NUM_SNPS)
@@ -48,173 +44,170 @@ def main():
 
     opts = util.parse_args()
     print(opts)
-    model_type, samples, demo_file, simulator, iterator, parameters = \
-        process_opts(opts)
 
-    is_range = (opts.is_range == "range")
+    # set up seeds
+    if opts.seed != None:
+        np.random.seed(opts.seed)
+        random.seed(opts.seed)
+        tf.random.set_seed(opts.seed)
+
+    generator, discriminator, iterator, parameters = process_opts(opts)
 
     # grid search
-    if opts.grid == 'grid':
-        posterior, test_acc_lst = grid_search(model_type, samples, \
-            demo_file, simulator, iterator, parameters, is_range)
+    if opts.grid:
+        print("Grid search not supported right now")
+        sys.exit()
+        #posterior, loss_lst = grid_search(discriminator, samples, simulator, \
+        #    iterator, parameters, opts.seed)
     # simulated annealing
     else:
-        posterior, test_acc_lst = simulated_annealing(model_type, samples, \
-            demo_file, simulator, iterator, parameters, is_range, toy=opts.toy)
+        posterior, loss_lst = simulated_annealing(generator, discriminator,\
+            iterator, parameters, opts.seed, toy=opts.toy)
 
     print(posterior)
-    print(test_acc_lst)
+    print(loss_lst)
 
 def process_opts(opts):
-    # TODO make file names command-line parameters
+
+    # parameter defaults
+    all_params = util.ParamSet()
+    parameters = util.parse_params(opts.params, all_params) # desired params
+    param_names = [p.name for p in parameters]
+
+    # if real data provided
+    real = False
+    if opts.data_h5 != None:
+        # most typical case for real data
+        iterator = real_data_random.RealDataRandomIterator(NUM_SNPS, \
+            opts.data_h5, opts.bed)
+        num_samples = iterator.num_samples # TODO use num_samples below
+        real = True
+
+    filter = False # for filtering singletons
 
     # parse model and simulator
-    model_type = models.SinglePopModel()
-    simulator = simulation.simulate_exp # TODO make option for simulate_const
-    demo_file = None # not used right now
-    region_file = None
+    if opts.model == 'const':
+        sample_sizes = [198]
+        discriminator = discriminators.OnePopModel()
+        simulator = simulation.simulate_const
+        #print("FILTERING SINGLETONS")
+        #filter = True
 
-    # out-of-Africa model (3 populations)
-    if opts.model == 'ooa':
-        samples = [66,66,66]
-        model_type = models.OOAmodel(samples[0], samples[1], samples[2])
-        simulator = simulation.simulate_ooa
-        region_file = real_data_random.BIG_DATA + "yri_ceu_chb_s36.npy"
+    # exp growth
+    elif opts.model == 'exp':
+        sample_sizes = [198]
+        discriminator = discriminators.OnePopModel()
+        simulator = simulation.simulate_exp
+        #print("FILTERING SINGLETONS")
+        #filter = True
 
     # isolation-with-migration model (2 populations)
     elif opts.model == 'im':
-        samples = [98,98]
-        model_type = models.IMmodel(samples[0], samples[1])
+        sample_sizes = [98,98]
+        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
+            sample_sizes[1])
         simulator = simulation.simulate_im
-        region_file = real_data_random.BIG_DATA + "yri_chb_s36.npy"
 
     # out-of-Africa model (2 populations)
     elif opts.model == 'ooa2':
-        samples = [98,98]
-        model_type = models.IMmodel(samples[0], samples[1])
+        sample_sizes = [98,98]
+        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
+            sample_sizes[1])
         simulator = simulation.simulate_ooa2
-        region_file = real_data_random.BIG_DATA + "yri_chb_s36.npy"
 
-    # single-pop model (YRI)
-    elif opts.model == 'yri':
-        samples = [198,0,0]
-        demo_file = 'hist/yri_4N0.psmc.h'
-        region_file = real_data_random.BIG_DATA + "yri_s36.npy"
+    # CEU/CHB (2 populations)
+    elif opts.model == 'post_ooa':
+        sample_sizes = [98,98]
+        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
+            sample_sizes[1])
+        simulator = simulation.simulate_postOOA
 
-    # single-pop model (CEU)
-    elif opts.model == 'ceu':
-        samples = [0,198,0]
-        demo_file = 'hist/fre_4N0.psmc.h'
-        region_file = real_data_random.BIG_DATA + "ceu_s36.npy"
-
-    # single-pop model (CHB)
-    elif opts.model == 'chb':
-        samples = [0,0,198]
-        demo_file = 'hist/han_4N0.psmc.h'
-        region_file = real_data_random.BIG_DATA + "chb_s36.npy"
-
-    # simulations in the style of real data
-    elif opts.model == 'exp':
-        samples = [0,198,0]
-        region_file = simulate_real.BIG_DATA + "sim_exp_s36.npy"
+    # out-of-Africa model (3 populations)
+    elif opts.model == 'ooa3':
+        sample_sizes = [66,66,66]
+        #per_pop = int(num_samples/3) # assume equal
+        discriminator = discriminators.ThreePopModel(sample_sizes[0], \
+            sample_sizes[1], sample_sizes[2])
+        simulator = simulation.simulate_ooa3
 
     # no other options
     else:
         sys.exit(opts.model + " is not recognized")
 
-    # real vs. simulated
-    iterator = None
-    if opts.sim_real == 'real':
-        # we don't really use this option anymore
-        if opts.model == 'exp':
-            print('region file', region_file)
-            iterator = simulate_real.SimRealIterator(samples, NUM_SNPS, \
-                L, region_file, num_test=NUM_TEST//2) # only need half from real
+    # generator
+    generator = simulation.Generator(simulator, param_names, sample_sizes,\
+        NUM_SNPS, L, opts.seed, mirror_real=real, reco_folder=opts.reco_folder,\
+        filter=filter)
 
-        # most typical case for real data
-        else:
-            iterator = real_data_random.RealDataRandomIterator(samples, \
-                NUM_SNPS, L, region_file, num_test=NUM_TEST//2) # half from real
+    # "real data" is simulated wiwh fixed params
+    if opts.data_h5 == None:
+        iterator = simulation.Generator(simulator, param_names, sample_sizes, \
+            NUM_SNPS, L, opts.seed, filter=filter) # don't need reco_folder
 
-    # not using range right now
-    if opts.is_range == 'range':
-        sys.exit("Unsupported option range")
-
-    # parameter defaults
-    all_params = util.ParamSet()
-    parameters = util.parse_params(opts.params, all_params) # desired params
-
-    return model_type, samples, demo_file, simulator, iterator, parameters
-
+    return generator, discriminator, iterator, parameters
 
 ################################################################################
 # SIMULATED ANNEALING
 ################################################################################
 
-
-def simulated_annealing(model_type, samples, demo_file, simulator, iterator, \
-        parameters, is_range, toy=False):
+def simulated_annealing(generator, discriminator, iterator, parameters, seed, \
+    toy=False):
     """Main function that drives GAN updates"""
 
-    # initialize params
-    if is_range:
-        s_current = [param.start_range() for param in parameters]
-    else:
-        s_current = [param.start() for param in parameters]
-    print("init", s_current)
+    # main object for pg-gan
+    pg_gan = PG_GAN(generator, discriminator, iterator, parameters, seed)
 
-    # compute "likelihood"
-    model = TrainingModel(model_type, samples, demo_file, simulator, iterator, \
-            parameters, is_range)
-    model.train(s_current, NUM_BATCH, BATCH_SIZE)
-    test_acc, conf_mat = model.test(s_current, NUM_TEST)
-    likelihood_prev = likelihood(test_acc)
-    print("params, test_acc", s_current, test_acc)
+    # find starting point through pre-training (update generator in method)
+    if not toy:
+        s_current = pg_gan.disc_pretraining(800, BATCH_SIZE)
+    else:
+        s_current = [param.start() for param in pg_gan.parameters]
+        pg_gan.generator.update_params(s_current)
+
+    loss_curr = pg_gan.generator_loss(s_current)
+    print("params, loss", s_current, loss_curr)
 
     posterior = [s_current]
-    test_acc_lst = [test_acc]
+    loss_lst = [loss_curr]
+    real_acc_lst = []
+    fake_acc_lst = []
 
     # simulated-annealing iterations
-    num_iter = NUM_ITER + len(parameters)*150 # more iterations for more params
+    num_iter = NUM_ITER
     # for toy example
     if toy:
         num_iter = 2
+
+    # main pg-gan loop
     for i in range(num_iter):
         print("\nITER", i)
         print("time", datetime.datetime.now().time())
         T = temperature(i, num_iter) # reduce width of proposal over time
 
-        # propose 5 updates and pick the best one based on test accuracy
+        # propose 10 updates per param and pick the best one
         s_best = None
-        likelihood_best = -float('inf')
-        k = random.choice(range(len(parameters))) # random param for this iter
-        for j in range(5):
-            if is_range:
-                s_proposal = [parameters[k].proposal_range(s_current[k], T) for\
-                    k in range(len(parameters))]
-            else:
+        loss_best = float('inf')
+        for k in range(len(parameters)): # trying all params!
+            #k = random.choice(range(len(parameters))) # random param
+            for j in range(10): # trying 10
+
                 # can update all the parameters at once, or choose one at a time
                 #s_proposal = [parameters[k].proposal(s_current[k], T) for k in\
                 #    range(len(parameters))]
                 s_proposal = [v for v in s_current] # copy
                 s_proposal[k] = parameters[k].proposal(s_current[k], T)
+                loss_proposal = pg_gan.generator_loss(s_proposal)
 
-            #model.train(s_proposal, NUM_BATCH, BATCH_SIZE) # don't train first
-            test_acc_proposal, conf_mat_proposal = model.test(s_proposal, \
-                NUM_TEST)
-            likelihood_proposal = likelihood(test_acc_proposal)
-
-            print(j, "proposal", s_proposal, test_acc_proposal, \
-                likelihood_proposal)
-            if likelihood_proposal > likelihood_best:
-                likelihood_best = likelihood_proposal
-                s_best = s_proposal
+                print(j, "proposal", s_proposal, loss_proposal)
+                if loss_proposal < loss_best: # minimizing loss
+                    loss_best = loss_proposal
+                    s_best = s_proposal
 
         # decide whether to accept or not (reduce accepting bad state later on)
-        if likelihood_best >= likelihood_prev: # unsure about this equal here
+        if loss_best <= loss_curr: # unsure about this equal here
             p_accept = 1
         else:
-            p_accept = (likelihood_best / likelihood_prev) * T
+            p_accept = (loss_curr / loss_best) * T
         rand = np.random.rand()
         accept = rand < p_accept
 
@@ -222,34 +215,30 @@ def simulated_annealing(model_type, samples, demo_file, simulator, iterator, \
         if accept:
             print("ACCEPTED")
             s_current = s_best
-            model.train(s_current, NUM_BATCH, BATCH_SIZE) # train only if accept
-            # redo testing to get an accurate value, but save old for comparison
-            likelihood_prev = likelihood_best
-            test_acc, conf_mat = model.test(s_current, NUM_TEST)
+            generator.update_params(s_current)
+            # train only if accept
+            real_acc, fake_acc = pg_gan.train_sa(NUM_BATCH, BATCH_SIZE)
+            loss_curr = loss_best
 
-        print("T, p_accept, rand, s_current, test_acc, conf_mat", end=" ")
-        print(T, p_accept, rand, s_current, test_acc, conf_mat)
+        # don't retrain
+        else:
+            print("NOT ACCEPTED")
+
+        print("T, p_accept, rand, s_current, loss_curr", end=" ")
+        print(T, p_accept, rand, s_current, loss_curr)
         posterior.append(s_current)
-        test_acc_lst.append(test_acc)
+        loss_lst.append(loss_curr)
 
-    return posterior, test_acc_lst
-
-def likelihood(test_acc):
-    """
-    Compute pseudo-likelihood based on test accuracy (triangle shaped):
-    0 -> 0
-    0.5 - 1
-    1.0 -> 0
-    """
-    return 1 - abs(2*test_acc - 1)
+    return posterior, loss_lst
 
 def temperature(i, num_iter):
     """Temperature controls the width of the proposal and acceptance prob."""
     return 1 - i/num_iter # start at 1, end at 0
 
+# not used right now
+"""
 def grid_search(model_type, samples, demo_file, simulator, iterator, \
-        parameters, is_range):
-    """Simple grid search"""
+        parameters, is_range, seed):
 
     # can only do one param right now
     assert len(parameters) == 1
@@ -260,7 +249,7 @@ def grid_search(model_type, samples, demo_file, simulator, iterator, \
     for fake_value in np.linspace(param.min, param.max, num=30):
         fake_params = [fake_value]
         model = TrainingModel(model_type, samples, demo_file, simulator, \
-            iterator, parameters, is_range)
+            iterator, parameters, is_range, seed)
 
         # train more for grid search
         model.train(fake_params, NUM_BATCH*10, BATCH_SIZE)
@@ -272,151 +261,120 @@ def grid_search(model_type, samples, demo_file, simulator, iterator, \
         all_likelihood.append(like_curr)
 
     return all_values, all_likelihood
-
+"""
 
 ################################################################################
 # TRAINING
 ################################################################################
 
+class PG_GAN:
 
-class TrainingModel:
-
-    def __init__(self, model, sample_sizes, demo_file, simulator, iterator, \
-            parameters, is_range):
+    def __init__(self, generator, discriminator, iterator, parameters, seed):
         """Setup the model and training framework"""
+        print("parameters", type(parameters), parameters)
 
-        # set up simulator
-        sim_real = "real"
-        if iterator == None:
-            sim_real = "sim"
-        param_names = [p.name for p in parameters]
-        self.simulator = simulation.Simulator(sim_real, simulator, param_names,\
-            sample_sizes, NUM_SNPS, L)
 
-        self.model = model
-        self.sample_sizes = sample_sizes
-        self.num_samples = sum(sample_sizes)
-        self.demo_file = demo_file
-        self.iterator = iterator
+        # set up generator and discriminator
+        self.generator = generator
+        self.discriminator = discriminator
+        self.iterator = iterator # for training data (real or simulated)
         self.parameters = parameters
-        self.is_range = is_range
 
         # this checks and prints the model (1 is for the batch size)
-        self.model.build_graph((1,self.num_samples,NUM_SNPS,NUM_CHANNELS))
-        self.model.summary()
+        self.discriminator.build_graph((1, iterator.num_samples, NUM_SNPS, \
+            NUM_CHANNELS))
+        self.discriminator.summary()
 
-        self.loss_object = tf.keras.losses.CategoricalCrossentropy()
+        self.cross_entropy =tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        self.disc_optimizer = tf.keras.optimizers.Adam()
 
-        self.optimizer = tf.keras.optimizers.Adam()
+    def disc_pretraining(self, num_batches, batch_size):
+        """Pre-train so discriminator has a chance to learn before generator"""
+        s_best = []
+        max_acc = 0
+        k = 0
 
-        self.train_loss = tf.keras.metrics.Mean(name='train_loss')
-        self.train_accuracy = tf.keras.metrics.CategoricalAccuracy(name = \
-            'train_accuracy')
+        # try with several random sets at first
+        while max_acc < 0.9 and k < 10:
+            s_trial = [param.start() for param in self.parameters]
+            print("trial", k+1, s_trial)
+            self.generator.update_params(s_trial)
+            real_acc, fake_acc = self.train_sa(num_batches, batch_size)
+            avg_acc = (real_acc + fake_acc)/2
+            if avg_acc > max_acc:
+                max_acc = avg_acc
+                s_best = s_trial
+            k += 1
 
-        self.test_loss = tf.keras.metrics.Mean(name='test_loss')
-        self.test_accuracy = tf.keras.metrics.CategoricalAccuracy(name = \
-            'test_accuracy')
+        # now start!
+        self.generator.update_params(s_best)
+        return s_best
 
-    def train(self, fake_values, num_batches, batch_size):
+    def train_sa(self, num_batches, batch_size):
         """Train using fake_values for the simulated data"""
 
-        # need to reinitialize the data since real/fake are different
-        train_ds = tf.data.Dataset.from_generator(
-            self.simulation_iterator,
-            args = [batch_size, fake_values, True],
-            output_types=(tf.float32, tf.float32),
-            output_shapes=([batch_size,self.num_samples,NUM_SNPS,NUM_CHANNELS],\
-                [batch_size,NUM_CLASSES]))
-
         for epoch in range(num_batches):
-            # reset the metrics at the start of the next epoch
-            self.train_loss.reset_states()
-            self.train_accuracy.reset_states()
 
-            include_conf = False
-            if (epoch+1) % 100 == 0:
-                include_conf = True
-
-            regions, labels = next(iter(train_ds))
-            conf_mat = train_step(regions, labels, self.model, \
-                self.loss_object, self.optimizer, self.train_loss, \
-                self.train_accuracy, confusion=include_conf)
+            real_regions = self.iterator.real_batch(batch_size, True)
+            real_acc, fake_acc, disc_loss = self.train_step(real_regions)
 
             if (epoch+1) % 100 == 0:
-                template = 'Epoch {}, Loss: {}, Accuracy: {}, Conf Matrix: {}'
+                template = 'Epoch {}, Loss: {}, Real Acc: {}, Fake Acc: {}'
                 print(template.format(epoch + 1,
-                                self.train_loss.result(),
-                                self.train_accuracy.result() * 100,
-                                np.array(conf_mat).tolist()))
+                                disc_loss,
+                                real_acc/BATCH_SIZE * 100,
+                                fake_acc/BATCH_SIZE * 100))
 
-    def test(self, fake_values, num_test):
-        """No training, just test"""
+        return real_acc/BATCH_SIZE, fake_acc/BATCH_SIZE
 
-        test_ds = tf.data.Dataset.from_generator(
-            self.simulation_iterator,
-            args = [num_test, fake_values, False],
-            output_types=(tf.float32, tf.float32),
-            output_shapes=([num_test,self.num_samples,NUM_SNPS,\
-                NUM_CHANNELS], [num_test,NUM_CLASSES]))
+    def generator_loss(self, proposed_params):
+        """ Generator loss """
+        generated_regions = self.generator.simulate_batch(BATCH_SIZE, \
+            params=proposed_params)
+        # not training when we use the discriminator here
+        fake_output = self.discriminator(generated_regions, training=False)
+        loss = self.cross_entropy(tf.ones_like(fake_output), fake_output)
+        return loss.numpy()
 
-        # finally: test and return
-        self.test_loss.reset_states()
-        self.test_accuracy.reset_states()
-        test_regions, test_labels = next(iter(test_ds))
-        conf_mat = test_step(test_regions, test_labels, self.model, \
-            self.loss_object, self.test_loss, self.test_accuracy)
+    def discriminator_loss(self, real_output, fake_output):
+        """ Discriminator loss """
+        # accuracy
+        real_acc = np.sum(real_output >= 0) # positive logit => pred 1
+        fake_acc = np.sum(fake_output <  0) # negative logit => pred 0
 
-        # this is the "value" of the function (can be transformed)
-        return self.test_accuracy.result().numpy(), np.array(conf_mat).tolist()
+        real_loss = self.cross_entropy(tf.ones_like(real_output), real_output)
+        fake_loss = self.cross_entropy(tf.zeros_like(fake_output), fake_output)
+        total_loss = real_loss + fake_loss
 
-    def simulation_iterator(self, batch_size, fake_values, is_train):
-        """Simulate a batch that contains both "real" and "fake" values"""
-        while True:
-            # real data
-            if self.iterator != None:
-                x_batch,y_batch = self.simulator.simulate_batch_real( \
-                    batch_size, fake_values, self.iterator, is_train)
-            # simulated data
-            else:
-                x_batch,y_batch = self.simulator.simulate_batch(batch_size, \
-                    fake_values)
-            yield x_batch,y_batch
+        # add on entropy regularization (small penalty)
+        real_entropy = self.cross_entropy(real_output, real_output)
+        fake_entropy = self.cross_entropy(fake_output, fake_output)
+        entropy = tf.math.scalar_mul(0.001/2, tf.math.add(real_entropy, \
+            fake_entropy)) # can I just use +,*? TODO
+        total_loss -= entropy # maximize entropy
 
-def train_step(regions, labels, model, loss_object, optimizer, train_loss, \
-        train_accuracy, confusion=False):
-    """From TF2 tutorial"""
-    with tf.GradientTape() as tape:
-        # training=True is only needed if there are layers with different
-        # behavior during training versus inference (e.g. Dropout).
-        predictions = model(regions, training=True)
-        loss = loss_object(labels, predictions)
+        return total_loss, real_acc, fake_acc
 
-    gradients = tape.gradient(loss, model.trainable_variables)
-    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+    def train_step(self, real_regions):
+        """One mini-batch for the discriminator"""
 
-    train_loss(loss)
-    train_accuracy(labels, predictions)
+        with tf.GradientTape() as disc_tape:
+            # use current params
+            generated_regions = self.generator.simulate_batch(BATCH_SIZE)
 
-    # periodically print confusion matrix
-    if confusion:
-        labels_arr = tf.argmax(labels, axis = 1)
-        predictions_arr = tf.argmax(predictions, axis = 1)
-        return tf.math.confusion_matrix(labels_arr, predictions_arr, \
-            num_classes=2)
+            real_output = self.discriminator(real_regions, training=True)
+            fake_output = self.discriminator(generated_regions, training=True)
 
-def test_step(regions, labels, model, loss_object, test_loss, test_accuracy):
-    """From TF2 tutorial"""
-    # training=False is only needed if there are layers with different
-    # behavior during training versus inference (e.g. Dropout).
-    predictions = model(regions, training=False)
-    t_loss = loss_object(labels, predictions)
+            disc_loss, real_acc, fake_acc = self.discriminator_loss( \
+                real_output, fake_output)
 
-    test_loss(t_loss)
-    test_accuracy(labels, predictions)
+        # gradient descent
+        gradients_of_discriminator = disc_tape.gradient(disc_loss, \
+            self.discriminator.trainable_variables)
+        self.disc_optimizer.apply_gradients(zip(gradients_of_discriminator, \
+            self.discriminator.trainable_variables))
 
-    labels_arr = tf.argmax(labels, axis = 1)
-    predictions_arr = tf.argmax(predictions, axis = 1)
-    return tf.math.confusion_matrix(labels_arr, predictions_arr, num_classes=2)
+        return real_acc, fake_acc, disc_loss
 
 if __name__ == "__main__":
     main()
