@@ -1,0 +1,8 @@
+tensorflow>=2.2.0
+matplotlib==3.3.4
+scipy==1.6.1
+h5py==2.10.0
+numpy>=1.17.2
+attr==0.3.1
+msprime==0.7.4
+seaborn==0.11.1
