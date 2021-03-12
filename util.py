@@ -118,62 +118,11 @@ class ParamSet:
 
         for j in range(len(names)):
             param = names[j]
-
-            # go through all params
-            if param == "Ne":
-                self.Ne.value = values[j]
-            elif param == "reco":
-                self.reco.value = values[j]
-            elif param == "mut":
-                self.mut.value = values[j]
-            elif param == "N_anc":
-                self.N_anc.value = values[j]
-            elif param == "T_split":
-                self.T_split.value = values[j]
-            elif param == "mig":
-                self.mig.value = values[j]
-            elif param == "N1":
-                self.N1.value = values[j]
-            elif param == "N2":
-                self.N2.value = values[j]
-            elif param == "growth":
-                self.growth.value = values[j]
-            elif param == "N3":
-                self.N3.value = values[j]
-            elif param == "T1":
-                self.T1.value = values[j]
-            elif param == "T2":
-                self.T2.value = values[j]
-            elif param == "N_A":
-                self.N_A.value = values[j]
-            elif param == "N_B":
-                self.N_B.value = values[j]
-            elif param == "N_AF":
-                self.N_AF.value = values[j]
-            elif param == "N_EU0":
-                self.N_EU0.value = values[j]
-            elif param == "N_AS0":
-                self.N_AS0.value = values[j]
-            elif param == "r_EU":
-                self.r_EU.value = values[j]
-            elif param == "r_AS":
-                self.r_AS.value = values[j]
-            elif param == "T_AF":
-                self.T_AF.value = values[j]
-            elif param == "T_B":
-                self.T_B.value = values[j]
-            elif param == "T_EU_AS":
-                self.T_EU_AS.value = values[j]
-            elif param == "m_AF_B":
-                self.m_AF_B.value = values[j]
-            elif param == "m_AF_EU":
-                self.m_AF_EU.value = values[j]
-            elif param == "m_AF_AS":
-                self.m_AF_AS.value = values[j]
-            elif param == "m_EU_AS":
-                self.m_EU_AS.value = values[j]
-            else:
+            attr = getattr(self, param, None)
+            if attr == None:
                 sys.exit(param + " is not a recognized parameter.")
+            else:
+                attr.value = values[j]
 
 def parse_params(param_input, all_params):
     """See which params were desired for inference"""
