@@ -49,6 +49,13 @@ class Generator:
                 for i in range(1,23)]
             self.prior, self.weights = util.parse_hapmap_empirical_prior(files)
 
+    def __str__(self):
+        s = "{\n"
+        for k,v in self.__dict__.items():
+            s += "\t" + k + ": " + str(v) + "\n"
+        s += "}\n"
+        return s
+
     def simulate_batch(self, batch_size, params=[], real=False, neg1=True):
 
         # initialize 4D matrix (two channels for distances)
