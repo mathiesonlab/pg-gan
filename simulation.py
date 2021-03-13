@@ -105,8 +105,7 @@ def prep_region(ts, num_snps, L, filter, neg1):
 
     positions = [round(variant.site.position) for variant in ts.variants()]
     assert len(positions) == snps_total
-    dist_vec = [0] + [(positions[j+1] - positions[j])/L for j in \
-        range(snps_total-1)]
+    dist_vec = [pos/L for pos in np.diff(positions,prepend=positions[0])]
 
     # when mirroring real data
     if filter:
