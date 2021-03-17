@@ -11,60 +11,12 @@ from tensorflow.keras.layers import Dense, Flatten, Conv1D, Conv2D, \
     MaxPooling2D, AveragePooling1D, Dropout, Concatenate
 from tensorflow.keras import Model
 
-class OnePopModel(Model):
-    """Single population model - based on defiNETti software."""
+class NPopModel(Model):
+    def __init__(self, *pops):
+        super(NPopModel, self).__init__()
 
-    def __init__(self):
-        super(OnePopModel, self).__init__()
-
-        # it is (1,5) for permutation invariance (shape is n X SNPs)
-        self.conv1 = Conv2D(32, (1, 5), activation='relu')
-        self.conv2 = Conv2D(64, (1, 5), activation='relu')
-        self.pool = MaxPooling2D(pool_size = (1,2), strides = (1,2))
-
-        self.flatten = Flatten()
-        self.dropout = Dropout(rate=0.5)
-
-        self.fc1 = Dense(128, activation='relu')
-        self.fc2 = Dense(128, activation='relu')
-        self.dense3 = Dense(1)#2, activation='softmax') # two classes
-
-    def call(self, x, training=None):
-        """x is the genotype matrix, dist is the SNP distances"""
-        x = self.conv1(x)
-        x = self.pool(x) # pool
-        x = self.conv2(x)
-        x = self.pool(x) # pool
-
-        # note axis is 1 b/c first axis is batch
-        # can try max or sum as the permutation-invariant function
-        #x = tf.math.reduce_max(x, axis=1)
-        x = tf.math.reduce_sum(x, axis=1)
-
-        x = self.flatten(x)
-        x = self.fc1(x)
-        x = self.dropout(x, training=training)
-        x = self.fc2(x)
-        x = self.dropout(x, training=training)
-        return self.dense3(x)
-
-    def build_graph(self, gt_shape):
-        """This is for testing, based on TF tutorials"""
-        gt_shape_nobatch = gt_shape[1:]
-        self.build(gt_shape) # make sure to call on shape with batch
-        gt_inputs = tf.keras.Input(shape=gt_shape_nobatch)
-
-        if not hasattr(self, 'call'):
-            raise AttributeError("User should define 'call' method!")
-
-        _ = self.call(gt_inputs)
-
-class TwoPopModel(Model):
-    """Two population model"""
-
-    # integers for num pop1, pop2
-    def __init__(self, pop1, pop2):
-        super(TwoPopModel, self).__init__()
+        # only supports N = 0 (OnePop) or N >=2 (TwoPop+)
+        assert len(pops) != 1
 
         # it is (1,5) for permutation invariance (shape is n X SNPs)
         self.conv1 = Conv2D(32, (1, 5), activation='relu')
@@ -72,49 +24,53 @@ class TwoPopModel(Model):
         self.pool = MaxPooling2D(pool_size = (1,2), strides = (1,2))
 
         self.flatten = Flatten()
-        self.merge = Concatenate()
+        if len(pops) >= 2:
+            # if we include this in 1pop, we'll get an error during
+            # summary() as this won't be built
+            self.merge = Concatenate()
         self.dropout = Dropout(rate=0.5)
 
         self.fc1 = Dense(128, activation='relu')
         self.fc2 = Dense(128, activation='relu')
         self.dense3 = Dense(1) # 2, activation='softmax') # two classes
 
-        self.pop1 = pop1
-        self.pop2 = pop2
+        
+        self.pops = [pop for pop in pops]
 
     def call(self, x, training=None):
-        """x is the genotype matrix, dist is the SNP distances"""
-
         # first divide into populations
-        x_pop1 = x[:, :self.pop1, :, :]
-        x_pop2 = x[:, self.pop1:, :, :]
+        x_pops = []
+        start = 0
+        for pop in self.pops[:-1]:
+            x_pops.append(x[:, start:start+pop, :, :])
+            start += pop
+        x_pops.append(x[:, start:, :, :])
 
         # two conv layers for each part
-        x_pop1 = self.conv1(x_pop1)
-        x_pop2 = self.conv1(x_pop2)
-        x_pop1 = self.pool(x_pop1) # pool
-        x_pop2 = self.pool(x_pop2) # pool
-
-        x_pop1 = self.conv2(x_pop1)
-        x_pop2 = self.conv2(x_pop2)
-        x_pop1 = self.pool(x_pop1) # pool
-        x_pop2 = self.pool(x_pop2) # pool
+        #### NOTE:
+        # for some reason doing it like this:
+        #
+        # for x_pop in x_pops:
+        #     x_pop = self.conv2(x_pop)
+        #
+        # will not work. Issue specially occurs with Conv2D (ie conv1/2)
+        # I think it has to do with x_pop being copied instead of being
+        # passed by reference. i am sad that this isn't C
+        x_pops = map(self.conv1, x_pops)
+        x_pops = map(self.pool, x_pops)
+        x_pops = map(self.conv2, x_pops)
+        x_pops = map(self.pool, x_pops)
 
         # 1 is the dimension of the individuals
-        # can try max or sum as the permutation-invariant function
-        #x_pop1_max = tf.math.reduce_max(x_pop1, axis=1)
-        #x_pop2_max = tf.math.reduce_max(x_pop2, axis=1)
-        x_pop1_sum = tf.math.reduce_sum(x_pop1, axis=1)
-        x_pop2_sum = tf.math.reduce_sum(x_pop2, axis=1)
+        x_pops = map(lambda x: tf.math.reduce_sum(x, axis=1), x_pops)
 
-        # flatten all
-        #x_pop1_max = self.flatten(x_pop1_max)
-        #x_pop2_max = self.flatten(x_pop2_max)
-        x_pop1_sum = self.flatten(x_pop1_sum)
-        x_pop2_sum = self.flatten(x_pop2_sum)
+        # # flatten all
+        # NOTE: not entirely sure why, but this throws errors if we do a map
+        # x_pops = map(self.flatten, x_pops)
+        x_pops = [self.flatten(x_pop) for x_pop in x_pops]
 
         # concatenate
-        m = self.merge([x_pop1_sum, x_pop2_sum]) # [x_pop1_max, x_pop2_max]
+        m = x_pops[0] if len(x_pops) == 1 else self.merge(x_pops)
         m = self.fc1(m)
         m = self.dropout(m, training=training)
         m = self.fc2(m)
@@ -132,78 +88,27 @@ class TwoPopModel(Model):
 
         _ = self.call(gt_inputs)
 
-class ThreePopModel(Model):
+### XXX: 
+# Given the way we segment population, I really don't understand why we have
+# these params. NPop only needs N-1 inputs
+
+### XXX: NEEDS TESTING
+class OnePopModel(NPopModel):
+    """Single population model - based on defiNETti software."""
+    def __init__(self):
+        super(OnePopModel, self).__init__()
+
+class TwoPopModel(NPopModel):
+    """Two population model"""
+
+    # integers for num pop1, pop2
+    def __init__(self, pop1, pop2):
+        super(TwoPopModel, self).__init__(pop1, pop2)
+
+### XXX: NEEDS TESTING
+class ThreePopModel(NPopModel):
     """Three population model"""
 
     # integers for num pop1, pop2, pop3
     def __init__(self, pop1, pop2, pop3):
-        super(ThreePopModel, self).__init__()
-
-        # it is (1,5) for permutation invariance (shape is n X SNPs)
-        self.conv1 = Conv2D(32, (1, 5), activation='relu')
-        self.conv2 = Conv2D(64, (1, 5), activation='relu')
-        self.pool = MaxPooling2D(pool_size = (1,2), strides = (1,2))
-
-        self.flatten = Flatten()
-        self.merge = Concatenate()
-        self.dropout = Dropout(rate=0.5)
-
-        self.fc1 = Dense(128, activation='relu')
-        self.fc2 = Dense(128, activation='relu')
-        self.dense3 = Dense(1)#2, activation='softmax') # two classes
-
-        self.pop1 = pop1
-        self.pop2 = pop2
-        self.pop3 = pop3
-
-    def call(self, x, training=None):
-        """x is the genotype matrix, dist is the SNP distances"""
-
-        # first divide into populations
-        x_pop1 = x[:, :self.pop1, :, :]
-        x_pop2 = x[:, self.pop1:self.pop1+self.pop2, :, :]
-        x_pop3 = x[:, self.pop1+self.pop2:, :, :]
-
-        # two conv layers for each part
-        x_pop1 = self.conv1(x_pop1)
-        x_pop2 = self.conv1(x_pop2)
-        x_pop3 = self.conv1(x_pop3)
-        x_pop1 = self.pool(x_pop1) # pool
-        x_pop2 = self.pool(x_pop2) # pool
-        x_pop3 = self.pool(x_pop3) # pool
-
-        x_pop1 = self.conv2(x_pop1)
-        x_pop2 = self.conv2(x_pop2)
-        x_pop3 = self.conv2(x_pop3)
-        x_pop1 = self.pool(x_pop1) # pool
-        x_pop2 = self.pool(x_pop2) # pool
-        x_pop3 = self.pool(x_pop3) # pool
-
-        # 1 is the dimension of the individuals
-        x_pop1 = tf.math.reduce_sum(x_pop1, axis=1)
-        x_pop2 = tf.math.reduce_sum(x_pop2, axis=1)
-        x_pop3 = tf.math.reduce_sum(x_pop3, axis=1)
-
-        # flatten all
-        x_pop1 = self.flatten(x_pop1)
-        x_pop2 = self.flatten(x_pop2)
-        x_pop3 = self.flatten(x_pop3)
-
-        # concatenate
-        m = self.merge([x_pop1, x_pop2, x_pop3])
-        m = self.fc1(m)
-        m = self.dropout(m, training=training)
-        m = self.fc2(m)
-        m = self.dropout(m, training=training)
-        return self.dense3(m)
-
-    def build_graph(self, gt_shape):
-        """This is for testing, based on TF tutorials"""
-        gt_shape_nobatch = gt_shape[1:]
-        self.build(gt_shape) # make sure to call on shape with batch
-        gt_inputs = tf.keras.Input(shape=gt_shape_nobatch)
-
-        if not hasattr(self, 'call'):
-            raise AttributeError("User should define 'call' method!")
-
-        _ = self.call(gt_inputs)
+        super(ThreePopModel, self).__init__(pop1, pop2, pop3)
