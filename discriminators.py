@@ -7,13 +7,14 @@ Date: 2/4/21
 # python imports
 import tensorflow as tf
 
-from tensorflow.keras.layers import Dense, Flatten, Conv1D, Conv2D, \
-    MaxPooling2D, AveragePooling1D, Dropout, Concatenate
+from tensorflow.keras.layers import Dense, Flatten, Conv2D, \
+    MaxPooling2D, Dropout, Concatenate
 from tensorflow.keras import Model
 
 class NPopModel(Model):
+    """ A parent class for our individual population models """
     def __init__(self, *pops):
-        super(NPopModel, self).__init__()
+        super().__init__()
 
         # only supports N = 0 (OnePop) or N >=2 (TwoPop+)
         assert len(pops) != 1
@@ -34,8 +35,7 @@ class NPopModel(Model):
         self.fc2 = Dense(128, activation='relu')
         self.dense3 = Dense(1) # 2, activation='softmax') # two classes
 
-        
-        self.pops = [pop for pop in pops]
+        self.pops = pops
 
     def call(self, x, training=None):
         # first divide into populations
@@ -88,7 +88,7 @@ class NPopModel(Model):
 
         _ = self.call(gt_inputs)
 
-### XXX: 
+### XXX:
 # Given the way we segment population, I really don't understand why we have
 # these params. NPop only needs N-1 inputs
 
@@ -96,19 +96,16 @@ class NPopModel(Model):
 class OnePopModel(NPopModel):
     """Single population model - based on defiNETti software."""
     def __init__(self):
-        super(OnePopModel, self).__init__()
+        super().__init__()
 
 class TwoPopModel(NPopModel):
     """Two population model"""
+    def __init__(self, *pops):
+        assert len(pops) == 2
+        super().__init__(*pops)
 
-    # integers for num pop1, pop2
-    def __init__(self, pop1, pop2):
-        super(TwoPopModel, self).__init__(pop1, pop2)
-
-### XXX: NEEDS TESTING
 class ThreePopModel(NPopModel):
     """Three population model"""
-
-    # integers for num pop1, pop2, pop3
-    def __init__(self, pop1, pop2, pop3):
-        super(ThreePopModel, self).__init__(pop1, pop2, pop3)
+    def __init__(self, *pops):
+        assert len(pops) == 3
+        super().__init__(*pops)
