@@ -82,6 +82,20 @@ python3 pg_gan.py -m im -p N1,N2,N_anc,T_split,reco,mig -t
   * A list of all generator loss values throughout training. In this case I obtained [6.124907, 4.915148, 2.7859032] (loss at the beginning as well as the loss after the two iterations). This is good since the
   loss is decreasing as the generator starts to move toward more realistic parameters (although two iterations will not get very far).
 
+(1.5) Alternative Toy flags to run:
+
+A one-pop model
+~~~
+python3 pg_gan.py -m exp -p N1,N2,growth,T1,T2 -t
+~~~
+
+A three-pop model
+~~~
+python3 pg_gan.py -m ooa3 -p N_A,N_B,N_AF,N_EU0,N_AS0,r_EU,r_AS,T_AF,T_B,T_EU_AS,m_AF_B,m_AF_EU,m_AF_AS,m_EU_AS -t
+~~~
+
+See `util.py` for available params for each model.
+
 2. Same example above but without the "toy" flag. This will take several hours to run (likely 5-6 with a GPU, more
     without one).
 
