@@ -4,9 +4,9 @@ Things to fix up:
 - optparse
 
 `util.py`
-- ParamSet.all - might be unecessary __dict__ would be suff
-- parge_args() uses optparse
-    - doesn't use mandatory flags (fixed in argsparse)
+X ParamSet.all - might be unecessary __dict__ would be suff
+X parge_args() uses optparse
+    X doesn't use mandatory flags (fixed in argsparse)
 
 `summary_stats.py`
 X fix reference to postOOA
@@ -19,7 +19,6 @@ X process_opts() can be shortened with string access to obj
 
 `discriminators.py`
 X rename postOOA to post_ooa (naming convention)
-
 
 `discriminators.py`
 X can deprecate the individual pop models

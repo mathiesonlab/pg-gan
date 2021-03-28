@@ -17,7 +17,7 @@ class PopModel(Model):
         super().__init__()
 
         # only supports one, two, and three pop models
-        assert len(pops) >= 1 and len(pops) <= 3:
+        assert len(pops) >= 1 and len(pops) <= 3
 
         # it is (1,5) for permutation invariance (shape is n X SNPs)
         self.conv1 = Conv2D(32, (1, 5), activation='relu')
@@ -88,24 +88,4 @@ class PopModel(Model):
 
         _ = self.call(gt_inputs)
 
-### XXX:
-# Given the way we segment population, I really don't understand why we have
-# these params. NPop only needs N-1 inputs
-
 ### XXX: NEEDS TESTING
-# class OnePopModel(NPopModel):
-#     """Single population model - based on defiNETti software."""
-#     def __init__(self):
-#         super().__init__()
-
-# class TwoPopModel(NPopModel):
-#     """Two population model"""
-#     def __init__(self, *pops):
-#         assert len(pops) == 2
-#         super().__init__(*pops)
-
-# class ThreePopModel(NPopModel):
-#     """Three population model"""
-#     def __init__(self, *pops):
-#         assert len(pops) == 3
-#         super().__init__(*pops)

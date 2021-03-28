@@ -5,7 +5,7 @@ Date: 2/4/21
 """
 
 import numpy as np
-import optparse
+import argparse
 import sys
 
 from scipy.stats import norm
@@ -106,12 +106,6 @@ class ParamSet:
         self.m_AF_AS = Parameter(1.9e-5, 0.0, 0.01, "m_AF_AS")
         self.m_EU_AS = Parameter(9.6e-5, 0.0, 0.01, "m_EU_AS")
 
-        self.all = [self.Ne, self.reco, self.mut, \
-            self.N_anc, self.T_split, self.mig, self.N1, self.N2, self.growth, \
-            self.N3, self.T1, self.T2, self.N_A, self.N_B, self.N_AF, \
-            self.N_EU0, self.N_AS0, self.r_EU, self.r_AS, self.T_AF, self.T_B, \
-            self.T_EU_AS, self.m_AF_B, self.m_AF_EU, self.m_AF_AS, self.m_EU_AS]
-
     def update(self, names, values):
         """Based on generator proposal, update desired param values"""
         assert len(names) == len(values)
@@ -128,7 +122,8 @@ def parse_params(param_input, all_params):
     """See which params were desired for inference"""
     param_strs = param_input.split(',')
     parameters = []
-    for p in all_params.all:
+    for _, p in vars(all_params).items():
+        print(p)
         if p.name in param_strs:
             parameters.append(p)
 
@@ -231,30 +226,22 @@ def filter_nonseg(region):
 
 def parse_args():
     """Parse command line arguments."""
-    parser = optparse.OptionParser(description='PG-GAN entry point')
+    parser = argparse.ArgumentParser(description='PG-GAN entry point')
 
-    parser.add_option('-m', '--model', type='string',help='exp, im, ooa2, ooa3')
-    parser.add_option('-p', '--params', type='string', \
-        help='comma separated parameter list')
-    parser.add_option('-d', '--data_h5', type='string', help='real data file')
-    parser.add_option('-b', '--bed', type='string', help='bed file (mask)')
-    parser.add_option('-r', '--reco_folder', type='string', \
+    parser.add_argument('-m', '--model', type=str, \
+        help='exp, im, ooa2, ooa3', required=True)
+    parser.add_argument('-p', '--params', type=str, \
+        help='comma separated parameter list', required=True)
+    parser.add_argument('-d', '--data_h5', type=str, help='real data file')
+    parser.add_argument('-b', '--bed', type=str, help='bed file (mask)')
+    parser.add_argument('-r', '--reco_folder', type=str, \
         help='recombination maps')
-    parser.add_option('-g', action="store_true", dest="grid",help='grid search')
-    parser.add_option('-t', action="store_true", dest="toy", help='toy example')
-    parser.add_option('-s', '--seed', type='int', default=1833, \
+    parser.add_argument('-g', action="store_true", dest="grid",help='grid search')
+    parser.add_argument('-t', action="store_true", dest="toy", help='toy example')
+    parser.add_argument('-s', '--seed', type=int, default=1833, \
         help='seed for RNG')
 
-    (opts, args) = parser.parse_args()
-
-    mandatories = ['model','params']
-    for m in mandatories:
-        if not opts.__dict__[m]:
-            print('mandatory option ' + m + ' is missing\n')
-            parser.print_help()
-            sys.exit()
-
-    return opts
+    return parser.parse_args()
 
 def parse_hapmap_empirical_prior(files):
     """
