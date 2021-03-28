@@ -11,13 +11,13 @@ from tensorflow.keras.layers import Dense, Flatten, Conv2D, \
     MaxPooling2D, Dropout, Concatenate
 from tensorflow.keras import Model
 
-class NPopModel(Model):
+class PopModel(Model):
     """ A parent class for our individual population models """
     def __init__(self, *pops):
         super().__init__()
 
-        # only supports N = 0 (OnePop) or N >=2 (TwoPop+)
-        assert len(pops) != 1
+        # only supports one, two, and three pop models
+        assert len(pops) >= 1 and len(pops) <= 3:
 
         # it is (1,5) for permutation invariance (shape is n X SNPs)
         self.conv1 = Conv2D(32, (1, 5), activation='relu')
@@ -93,19 +93,19 @@ class NPopModel(Model):
 # these params. NPop only needs N-1 inputs
 
 ### XXX: NEEDS TESTING
-class OnePopModel(NPopModel):
-    """Single population model - based on defiNETti software."""
-    def __init__(self):
-        super().__init__()
+# class OnePopModel(NPopModel):
+#     """Single population model - based on defiNETti software."""
+#     def __init__(self):
+#         super().__init__()
 
-class TwoPopModel(NPopModel):
-    """Two population model"""
-    def __init__(self, *pops):
-        assert len(pops) == 2
-        super().__init__(*pops)
+# class TwoPopModel(NPopModel):
+#     """Two population model"""
+#     def __init__(self, *pops):
+#         assert len(pops) == 2
+#         super().__init__(*pops)
 
-class ThreePopModel(NPopModel):
-    """Three population model"""
-    def __init__(self, *pops):
-        assert len(pops) == 3
-        super().__init__(*pops)
+# class ThreePopModel(NPopModel):
+#     """Three population model"""
+#     def __init__(self, *pops):
+#         assert len(pops) == 3
+#         super().__init__(*pops)

@@ -1,6 +1,6 @@
 Things to fix up:
 
-`cdf2hdf5p.py`
+`vcf2hdf5.py`
 - optparse
 
 `util.py`
@@ -9,12 +9,18 @@ Things to fix up:
     - doesn't use mandatory flags (fixed in argsparse)
 
 `summary_stats.py`
+X fix reference to postOOA
 - process_opts can be shortened with string access to obj
 - significant duplicated code in main() for matrices
 - significant duplicated code for all plot_*() functions
 
 `pg_gan.py`
-- process_opts can be shortened with string access to obj
+X process_opts() can be shortened with string access to obj
 
 `discriminators.py`
-- can deprecate the individual pop models
+X rename postOOA to post_ooa (naming convention)
+
+
+`discriminators.py`
+X can deprecate the individual pop models
+X can make it handle from 1 instead of onepop=0

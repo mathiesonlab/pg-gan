@@ -82,7 +82,7 @@ def process_opts(opts):
     # CEU/CHB (2 populations)
     elif opts.model == 'post_ooa':
         sample_sizes = [98,98]
-        simulator = simulation.simulate_postOOA
+        simulator = simulation.simulate_post_ooa
 
     # out-of-Africa model (3 populations)
     elif opts.model == 'ooa3':

@@ -86,60 +86,28 @@ def process_opts(opts):
     filter = False # for filtering singletons
 
     # parse model and simulator
-    if opts.model == 'const':
-        sample_sizes = [198]
-        discriminator = discriminators.OnePopModel()
-        simulator = simulation.simulate_const
-        #print("FILTERING SINGLETONS")
-        #filter = True
-
-    # exp growth
-    elif opts.model == 'exp':
-        sample_sizes = [198]
-        discriminator = discriminators.OnePopModel()
-        simulator = simulation.simulate_exp
-        #print("FILTERING SINGLETONS")
-        #filter = True
-
-    # isolation-with-migration model (2 populations)
-    elif opts.model == 'im':
-        sample_sizes = [98,98]
-        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
-            sample_sizes[1])
-        simulator = simulation.simulate_im
-
-    # out-of-Africa model (2 populations)
-    elif opts.model == 'ooa2':
-        sample_sizes = [98,98]
-        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
-            sample_sizes[1])
-        simulator = simulation.simulate_ooa2
-
-    # CEU/CHB (2 populations)
-    elif opts.model == 'post_ooa':
-        sample_sizes = [98,98]
-        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
-            sample_sizes[1])
-        simulator = simulation.simulate_postOOA
-
-    # out-of-Africa model (3 populations)
-    elif opts.model == 'ooa3':
-        sample_sizes = [66,66,66]
-        #per_pop = int(num_samples/3) # assume equal
-        discriminator = discriminators.ThreePopModel(sample_sizes[0], \
-            sample_sizes[1], sample_sizes[2])
-        simulator = simulation.simulate_ooa3
-
-    # no other options
-    else:
+    model_sample_sizes = {
+        'const': [198],
+        'exp': [198],
+        'im': [98,98],
+        'ooa2': [98,98],
+        'post_ooa': [98,98],
+        'ooa3': [66,66,66],
+    }
+    if opts.model not in model_sample_sizes:
         sys.exit(opts.model + " is not recognized")
+    sample_sizes = model_sample_sizes[opts.model]
+    discriminator = discriminators.PopModel(*sample_sizes)
+    simulator = getattr(simulation, "simulate_" + opts.model, None)
+    if simulator == None:
+        sys.exit("simulate_" + opts.model + " is not recognized")
 
     # generator
     generator = simulation.Generator(simulator, param_names, sample_sizes,\
         NUM_SNPS, L, opts.seed, mirror_real=real, reco_folder=opts.reco_folder,\
         filter=filter)
 
-    # "real data" is simulated wiwh fixed params
+    # "real data" is simulated with fixed params
     if opts.data_h5 == None:
         iterator = simulation.Generator(simulator, param_names, sample_sizes, \
             NUM_SNPS, L, opts.seed, filter=filter) # don't need reco_folder

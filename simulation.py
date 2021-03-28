@@ -225,7 +225,7 @@ def simulate_ooa2(params, sample_sizes, L, seed, prior=[], weights=[]):
 
     return ts
 
-def simulate_postOOA(params, sample_sizes, L, seed, prior=[], weights=[]):
+def simulate_post_ooa(params, sample_sizes, L, seed, prior=[], weights=[]):
     """Note this is a 2 population model for CEU/CHB split"""
     assert len(sample_sizes) == 2
 
