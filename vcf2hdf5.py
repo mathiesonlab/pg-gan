@@ -7,7 +7,7 @@ Date: 2/4/21
 
 import allel
 import numpy as np
-import optparse
+import argparse
 import sys
 
 # example command line
@@ -19,23 +19,14 @@ def main():
 
 def parse_args():
     """Parse command line arguments."""
-    parser = optparse.OptionParser(description='Convert VCF to HDF5')
+    parser = argparse.ArgumentParser(description='Convert VCF to HDF5')
 
-    parser.add_option('-i', '--vcf_filename', type='string', \
-        help='path to input VCF file')
-    parser.add_option('-o', '--h5_filename', type='string', \
-        help='path to output H5 file')
+    parser.add_argument('-i', '--vcf_filename', type=str, \
+        help='path to input VCF file', required=True)
+    parser.add_argument('-o', '--h5_filename', type=str, \
+        help='path to output H5 file', required=True)
 
-    (opts, args) = parser.parse_args()
-
-    mandatories = ['vcf_filename','h5_filename']
-    for m in mandatories:
-        if not opts.__dict__[m]:
-            print('mandatory option ' + m + ' is missing\n')
-            parser.print_help()
-            sys.exit()
-
-    return opts
+    return parser.parse_args()
 
 def convert_vcf(vcf_filename, h5_filename):
     """Convert vcf_filename"""

@@ -1,7 +1,7 @@
 Things to fix up:
 
 `vcf2hdf5.py`
-- optparse
+X optparse
 
 `util.py`
 X ParamSet.all - might be unecessary __dict__ would be suff
