@@ -370,6 +370,9 @@ def simulate_ooa3(params, sample_sizes, L, seed, prior=[], weights=[]):
 
     return ts
 
+def simulate_fsc(params, sample_sizes, L, seed, prior=[], weights=[]):
+    return simulate_ooa2(params, sample_sizes, L, seed, prior, weights)
+
 # testing
 if __name__ == "__main__":
 

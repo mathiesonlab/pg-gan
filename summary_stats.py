@@ -17,7 +17,7 @@ import sys
 
 # our imports
 import real_data_random
-import simulate_py_from_MSMC_IM
+# import simulate_py_from_MSMC_IM #XXX: module missing
 import simulation
 import ss_helpers
 import util
@@ -51,47 +51,30 @@ def process_opts(opts):
     filter = False # for filtering singletons
 
     # parse model and simulator
-    if opts.model == 'const':
-        sample_sizes = [198]
-        simulator = simulation.simulate_const
-        #print("FILTERING SINGLETONS")
-        #filter = True
 
-    elif opts.model == 'exp':
-        sample_sizes = [198]
-        simulator = simulation.simulate_exp
-        #print("FILTERING SINGLETONS")
-        #filter = True
-
-    # isolation-with-migration model (2 populations)
-    elif opts.model == 'im':
-        sample_sizes = [98,98]
-        simulator = simulation.simulate_im
-
-    # out-of-Africa model (2 populations)
-    elif opts.model in ['ooa2', 'fsc']:
-        sample_sizes = [98,98]
-        simulator = simulation.simulate_ooa2
-
-    # MSMC
-    elif opts.model == 'msmc':
-        print("\nALERT you are running MSMC sim!\n")
-        sample_sizes = [98,98]
-        simulator = simulate_py_from_MSMC_IM.simulate_msmc
-
-    # CEU/CHB (2 populations)
-    elif opts.model == 'post_ooa':
-        sample_sizes = [98,98]
-        simulator = simulation.simulate_post_ooa
-
-    # out-of-Africa model (3 populations)
-    elif opts.model == 'ooa3':
-        sample_sizes = [66,66,66]
-        simulator = simulation.simulate_ooa3
-
-    # no other options
-    else:
+    # parse model and simulator
+    model_sample_sizes = {
+        'const': [198],
+        'exp': [198],
+        'im': [98,98],
+        'ooa2': [98,98],
+        'fsc': [98,98], #(uses the ooa2 model) XXX: not sure why we support this if it's just ooa2?
+        'post_ooa': [98,98],
+        'ooa3': [66,66,66],
+    }
+    if opts.model not in model_sample_sizes:
         sys.exit(opts.model + " is not recognized")
+    sample_sizes = model_sample_sizes[opts.model]
+    simulator = getattr(simulation, "simulate_" + opts.model, None)
+    if simulator == None:
+        sys.exit("simulate_" + opts.model + " is not recognized")
+
+    # XXX: simulate_py_from_MSMC_IM.py missing
+    # MSMC
+    # elif opts.model == 'msmc':
+    #     print("\nALERT you are running MSMC sim!\n")
+    #     sample_sizes = [98,98]
+    #     simulator = simulate_py_from_MSMC_IM.simulate_msmc
 
     # if real data provided
     iterator = real_data_random.RealDataRandomIterator(NUM_SNPS, \

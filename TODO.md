@@ -10,7 +10,7 @@ X parge_args() uses optparse
 
 `summary_stats.py`
 X fix reference to postOOA
-- process_opts can be shortened with string access to obj
+X process_opts can be shortened with string access to obj
 - significant duplicated code in main() for matrices
 - significant duplicated code for all plot_*() functions
 
