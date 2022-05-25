@@ -72,7 +72,7 @@ class Generator:
             seed = self.rng.integers(1,high=2**32) # like GAN "noise"
 
             ts = self.simulator(sim_params, self.sample_sizes, self.L, seed, \
-                prior=self.prior, weights=self.weights)
+                                self.get_reco(sim_params))
             region = prep_region(ts, self.num_snps, self.L, self.filter, neg1)
 
             if self.num_snps == None:
@@ -88,6 +88,14 @@ class Generator:
     def update_params(self, new_params):
         self.curr_params = new_params
 
+    def get_reco(self, params):
+        if self.prior == []:
+            reco =  np.random.normal(1e-8, 1e-8)
+            reco = params.reco.value if reco <= 0 else reco
+            return reco
+
+        return draw_background_rate_from_prior(self.prior, self.weights)
+    
 def draw_background_rate_from_prior(prior_rates, prob):
     return np.random.choice(prior_rates, p=prob)
 
@@ -108,15 +116,9 @@ def prep_region(ts, num_snps, L, filter, neg1):
     else:
         return util.process_gt_dist(gt_matrix, dist_vec, num_snps, neg1=neg1)
 
-def simulate_im(params, sample_sizes, L, seed, prior=[], weights=[]):
+def simulate_im(params, sample_sizes, L, seed, reco):
     """Note this is a 2 population model"""
     assert len(sample_sizes) == 2
-
-    # sample reco or use value
-    if prior != []:
-        reco = draw_background_rate_from_prior(prior, weights)
-    else:
-        reco = params.reco.value
 
     # condense params
     N1 = params.N1.value
@@ -165,15 +167,9 @@ def simulate_im(params, sample_sizes, L, seed, prior=[], weights=[]):
 
     return ts
 
-def simulate_ooa2(params, sample_sizes, L, seed, prior=[], weights=[]):
+def simulate_ooa2(params, sample_sizes, L, seed, reco):
     """Note this is a 2 population model"""
     assert len(sample_sizes) == 2
-
-    # sample reco or use value
-    if prior != []:
-        reco = draw_background_rate_from_prior(prior, weights)
-    else:
-        reco = params.reco.value
 
     # condense params
     T1 = params.T1.value
@@ -219,15 +215,9 @@ def simulate_ooa2(params, sample_sizes, L, seed, prior=[], weights=[]):
 
     return ts
 
-def simulate_postOOA(params, sample_sizes, L, seed, prior=[], weights=[]):
+def simulate_postOOA(params, sample_sizes, L, seed, reco):
     """Note this is a 2 population model for CEU/CHB split"""
     assert len(sample_sizes) == 2
-
-    # sample reco or use value
-    if prior != []:
-        reco = draw_background_rate_from_prior(prior, weights)
-    else:
-        reco = params.reco.value
 
     # condense params
     T1 = params.T1.value
@@ -281,15 +271,9 @@ def simulate_postOOA(params, sample_sizes, L, seed, prior=[], weights=[]):
 
     return ts
 
-def simulate_exp(params, sample_sizes, L, seed, prior=[], weights=[]):
+def simulate_exp(params, sample_sizes, L, seed, reco):
     """Note this is a 1 population model"""
     assert len(sample_sizes) == 1
-
-    # sample reco or use value
-    if prior != []:
-        reco = draw_background_rate_from_prior(prior, weights)
-    else:
-        reco = params.reco.value
 
     T2 = params.T2.value
     N2 = params.N2.value
@@ -314,14 +298,8 @@ def simulate_exp(params, sample_sizes, L, seed, prior=[], weights=[]):
 
     return ts
 
-def simulate_const(params, sample_sizes, L, seed, prior=[], weights=[]):
+def simulate_const(params, sample_sizes, L, seed, reco):
     assert len(sample_sizes) == 1
-
-    # sample reco or use value
-    if prior != []:
-        reco = draw_background_rate_from_prior(prior, weights)
-    else:
-        reco = params.reco.value
 
     # simulate data
     ts = msprime.simulate(sample_size=sum(sample_sizes), Ne=params.Ne.value, \
@@ -330,7 +308,7 @@ def simulate_const(params, sample_sizes, L, seed, prior=[], weights=[]):
 
     return ts
 
-def simulate_ooa3(params, sample_sizes, L, seed, prior=[], weights=[]):
+def simulate_ooa3(params, sample_sizes, L, seed, reco):
     """From OOA3 as implemented in stdpopsim"""
     assert len(sample_sizes) == 3
 
