@@ -11,7 +11,7 @@ import numpy as np
 import random
 import sys
 import tensorflow as tf
-from scipy.optimize import basinhopping
+import scipy.stats
 
 # our imports
 import discriminators
@@ -347,11 +347,10 @@ class PG_GAN:
         total_loss = real_loss + fake_loss
 
         # add on entropy regularization (small penalty)
-        real_entropy = self.cross_entropy(real_output, real_output)
-        fake_entropy = self.cross_entropy(fake_output, fake_output)
+        real_entropy = scipy.stats.entropy(tf.nn.sigmoid(real_output))
+        fake_entropy = scipy.stats.entropy(tf.nn.sigmoid(fake_output))
         entropy = tf.math.scalar_mul(0.001/2, tf.math.add(real_entropy, \
-            fake_entropy)) # can I just use +,*? TODO
-        total_loss -= entropy # maximize entropy
+            fake_entropy)) # can I just use +,*? TODO experiement with constant
 
         return total_loss, real_acc, fake_acc
 
