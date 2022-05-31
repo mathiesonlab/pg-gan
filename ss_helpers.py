@@ -190,7 +190,7 @@ def compute_fst(raw):
 ################################################################################
 
 def plot_sfs(ax, real_sfs, sim_sfs, real_color, sim_color, pop="", \
-    single=False):
+    sim_label="", single=False):
     """Plot first 10 entries of the SFS"""
     # average over regions
     num_sfs = len(real_sfs)
@@ -200,7 +200,7 @@ def plot_sfs(ax, real_sfs, sim_sfs, real_color, sim_color, pop="", \
     # plotting
     ax.bar([x-0.3 for x in range(num_sfs)], real, label=pop, width=0.4, \
         color=real_color)
-    ax.bar(range(num_sfs), sim, label="simulated", width=0.4, color=sim_color)
+    ax.bar(range(num_sfs), sim, label=sim_label, width=0.4, color=sim_color)
     ax.set_xlim(-1,len(real_sfs))
     ax.set_xlabel("minor allele count (SFS)")
     ax.set_ylabel("frequency per region")
@@ -213,12 +213,12 @@ def plot_sfs(ax, real_sfs, sim_sfs, real_color, sim_color, pop="", \
             transform=ax.transAxes, fontsize=18)
 
 def plot_dist(ax, real_dist, sim_dist, real_color, sim_color, pop="", \
-    single=False):
+    sim_label="", single=False):
     """Plot inter-SNP distances, measure of SNP density"""
 
     # plotting
     sns.distplot(real_dist, ax=ax, label=pop, color=real_color)
-    sns.distplot(sim_dist, ax=ax, label="simulated", color=sim_color)
+    sns.distplot(sim_dist, ax=ax, label=sim_label, color=sim_color)
     ax.set(xlabel="inter-SNP distances")
     ax.set_xlim(-50,1250)
 
@@ -229,7 +229,8 @@ def plot_dist(ax, real_dist, sim_dist, real_color, sim_color, pop="", \
         ax.text(.85, .85, pop, horizontalalignment='center', \
             transform=ax.transAxes, fontsize=18)
 
-def plot_ld(ax, real_ld, sim_ld, real_color, sim_color, pop="", single=False):
+def plot_ld(ax, real_ld, sim_ld, real_color, sim_color, pop="", sim_label="",\
+    single=False):
     """Plot LD distribution as a function of distance between SNPs"""
 
     nbin = NUM_LD
@@ -244,7 +245,7 @@ def plot_ld(ax, real_ld, sim_ld, real_color, sim_color, pop="", single=False):
     ax.errorbar(dist_bins, real_mean, yerr=real_stddev, color=real_color, \
         label=pop)
     ax.errorbar([x+150 for x in dist_bins], sim_mean, yerr=sim_stddev, \
-        color=sim_color, label="simulated")
+        color=sim_color, label=sim_label)
     ax.set_xlabel("distance between SNPs")
     ax.set_ylabel(r'LD ($r^2$)')
 
@@ -256,12 +257,12 @@ def plot_ld(ax, real_ld, sim_ld, real_color, sim_color, pop="", single=False):
             transform=ax.transAxes, fontsize=18)
 
 def plot_generic(ax, name, real, sim, real_color, sim_color, pop="", \
-    single=False):
+    sim_label="", single=False):
     """Plot a generic stat like Taj D, pi, num haps"""
 
     # plotting
     sns.distplot(real, ax=ax, color=real_color, label=pop)
-    sns.distplot(sim, ax=ax, color=sim_color, label="simulated")
+    sns.distplot(sim, ax=ax, color=sim_color, label=sim_label)
     ax.set(xlabel=name)
     if name == "number of haplotypes":
         ax.set_xlim(0,100)
