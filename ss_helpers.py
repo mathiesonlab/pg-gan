@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+import global_vars
+
 # GLOBALS
 NUM_SFS = 10
 NUM_LD  = 15
@@ -286,7 +288,7 @@ def plot_fst(ax, real_fst, sim_fst, real_label, sim_label, real_color, \
 # COLLECT STATISTICS
 ################################################################################
 
-def stats_all(matrices, matrices_region, L):
+def stats_all(matrices, matrices_region):
     """Set up and compute stats"""
 
     # sfs
@@ -330,10 +332,10 @@ def stats_all(matrices, matrices_region, L):
             pop_sfs[s].append(sfs[s])
 
         # inter-snp
-        pop_dist.extend([x*L for x in intersnp])
+        pop_dist.extend([x*global_vars.L for x in intersnp])
 
         # LD
-        ld = compute_ld(vm, L)
+        ld = compute_ld(vm, global_vars.L)
         for l in range(len(ld)):
             pop_ld[l].append(ld[l])
 

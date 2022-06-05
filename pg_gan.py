@@ -14,28 +14,23 @@ import tensorflow as tf
 import scipy.stats
 
 # our imports
-import discriminators
-import real_data_random
-import simulation
+import global_vars
 import util
 
 from real_data_random import Region
 
 # globals for simulated annealing
 NUM_ITER = 300
-BATCH_SIZE = 50
 NUM_BATCH = 100
 print("NUM_ITER", NUM_ITER)
-print("BATCH_SIZE", BATCH_SIZE)
+print("BATCH_SIZE", global_vars.BATCH_SIZE)
 print("NUM_BATCH", NUM_BATCH)
 
 # globals for data
-NUM_SNPS = 36       # number of seg sites, should be divisible by 4
-L = 50000           # heuristic to get enough SNPs for simulations
 NUM_CLASSES = 2     # "real" vs "simulated"
 NUM_CHANNELS = 2    # SNPs and distances
-print("NUM_SNPS", NUM_SNPS)
-print("L", L)
+print("NUM_SNPS", global_vars.NUM_SNPS)
+print("L", global_vars.L)
 print("NUM_CLASSES", NUM_CLASSES)
 print("NUM_CHANNELS", NUM_CHANNELS)
 
@@ -51,7 +46,7 @@ def main():
         random.seed(opts.seed)
         tf.random.set_seed(opts.seed)
 
-    generator, discriminator, iterator, parameters = process_opts(opts)
+    generator, discriminator, iterator, parameters = utio.process_opts(opts)
 
     # grid search
     if opts.grid:
@@ -67,85 +62,6 @@ def main():
     print(posterior)
     print(loss_lst)
 
-def process_opts(opts):
-
-    # parameter defaults
-    all_params = util.ParamSet()
-    parameters = util.parse_params(opts.params, all_params) # desired params
-    param_names = [p.name for p in parameters]
-
-    # if real data provided
-    real = False
-    if opts.data_h5 != None:
-        # most typical case for real data
-        iterator = real_data_random.RealDataRandomIterator(NUM_SNPS, \
-            opts.data_h5, opts.bed)
-        num_samples = iterator.num_samples # TODO use num_samples below
-        real = True
-
-    filter = False # for filtering singletons
-
-    # parse model and simulator
-    if opts.model == 'const':
-        sample_sizes = [198]
-        discriminator = discriminators.OnePopModel()
-        simulator = simulation.simulate_const
-        #print("FILTERING SINGLETONS")
-        #filter = True
-
-    # exp growth
-    elif opts.model == 'exp':
-        sample_sizes = [198]
-        discriminator = discriminators.OnePopModel()
-        simulator = simulation.simulate_exp
-        #print("FILTERING SINGLETONS")
-        #filter = True
-
-    # isolation-with-migration model (2 populations)
-    elif opts.model == 'im':
-        sample_sizes = [98,98]
-        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
-            sample_sizes[1])
-        simulator = simulation.simulate_im
-
-    # out-of-Africa model (2 populations)
-    elif opts.model == 'ooa2':
-        sample_sizes = [98,98]
-        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
-            sample_sizes[1])
-        simulator = simulation.simulate_ooa2
-
-    # CEU/CHB (2 populations)
-    elif opts.model == 'post_ooa':
-        sample_sizes = [98,98]
-        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
-            sample_sizes[1])
-        simulator = simulation.simulate_postOOA
-
-    # out-of-Africa model (3 populations)
-    elif opts.model == 'ooa3':
-        sample_sizes = [66,66,66]
-        #per_pop = int(num_samples/3) # assume equal
-        discriminator = discriminators.ThreePopModel(sample_sizes[0], \
-            sample_sizes[1], sample_sizes[2])
-        simulator = simulation.simulate_ooa3
-
-    # no other options
-    else:
-        sys.exit(opts.model + " is not recognized")
-
-    # generator
-    generator = simulation.Generator(simulator, param_names, sample_sizes,\
-        NUM_SNPS, L, opts.seed, mirror_real=real, reco_folder=opts.reco_folder,\
-        filter=filter)
-
-    # "real data" is simulated wiwh fixed params
-    if opts.data_h5 == None:
-        iterator = simulation.Generator(simulator, param_names, sample_sizes, \
-            NUM_SNPS, L, opts.seed, filter=filter) # don't need reco_folder
-
-    return generator, discriminator, iterator, parameters
-
 ################################################################################
 # SIMULATED ANNEALING
 ################################################################################
@@ -159,8 +75,9 @@ def simulated_annealing(generator, discriminator, iterator, parameters, seed, \
 
     # find starting point through pre-training (update generator in method)
     if not toy:
-        s_current = pg_gan.disc_pretraining(800, BATCH_SIZE)
+        s_current = pg_gan.disc_pretraining(800)
     else:
+        pg_gan.disc_pretraining(1) # for testing purposes
         s_current = [param.start() for param in pg_gan.parameters]
         pg_gan.generator.update_params(s_current)
 
@@ -217,7 +134,7 @@ def simulated_annealing(generator, discriminator, iterator, parameters, seed, \
             s_current = s_best
             generator.update_params(s_current)
             # train only if accept
-            real_acc, fake_acc = pg_gan.train_sa(NUM_BATCH, BATCH_SIZE)
+            real_acc, fake_acc = pg_gan.train_sa(NUM_BATCH, global_vars.BATCH_SIZE)
             loss_curr = loss_best
 
         # don't retrain
@@ -252,7 +169,7 @@ def grid_search(model_type, samples, demo_file, simulator, iterator, \
             iterator, parameters, is_range, seed)
 
         # train more for grid search
-        model.train(fake_params, NUM_BATCH*10, BATCH_SIZE)
+        model.train(fake_params, NUM_BATCH*10, globals.BATCH_SIZE)
         test_acc, conf_mat = model.test(fake_params, NUM_TEST)
         like_curr = likelihood(test_acc)
         print("params, test_acc, likelihood", fake_value, test_acc, like_curr)
@@ -281,25 +198,25 @@ class PG_GAN:
         self.parameters = parameters
 
         # this checks and prints the model (1 is for the batch size)
-        self.discriminator.build_graph((1, iterator.num_samples, NUM_SNPS, \
+        self.discriminator.build_graph((1, iterator.num_samples, global_vars.NUM_SNPS, \
             NUM_CHANNELS))
         self.discriminator.summary()
 
         self.cross_entropy =tf.keras.losses.BinaryCrossentropy(from_logits=True)
         self.disc_optimizer = tf.keras.optimizers.Adam()
 
-    def disc_pretraining(self, num_batches, batch_size):
+    def disc_pretraining(self, num_batches):
         """Pre-train so discriminator has a chance to learn before generator"""
         s_best = []
         max_acc = 0
-        k = 0
+        k = 0 if num_batches > 1 else 9 # limit iterations for toy/testing
 
         # try with several random sets at first
         while max_acc < 0.9 and k < 10:
             s_trial = [param.start() for param in self.parameters]
             print("trial", k+1, s_trial)
             self.generator.update_params(s_trial)
-            real_acc, fake_acc = self.train_sa(num_batches, batch_size)
+            real_acc, fake_acc = self.train_sa(num_batches, global_vars.BATCH_SIZE)
             avg_acc = (real_acc + fake_acc)/2
             if avg_acc > max_acc:
                 max_acc = avg_acc
@@ -315,21 +232,21 @@ class PG_GAN:
 
         for epoch in range(num_batches):
 
-            real_regions = self.iterator.real_batch(batch_size, True)
+            real_regions = self.iterator.real_batch(batch_size, neg1 = True)
             real_acc, fake_acc, disc_loss = self.train_step(real_regions)
 
             if (epoch+1) % 100 == 0:
                 template = 'Epoch {}, Loss: {}, Real Acc: {}, Fake Acc: {}'
                 print(template.format(epoch + 1,
                                 disc_loss,
-                                real_acc/BATCH_SIZE * 100,
-                                fake_acc/BATCH_SIZE * 100))
+                                real_acc/global_vars.BATCH_SIZE * 100,
+                                fake_acc/global_vars.BATCH_SIZE * 100))
 
-        return real_acc/BATCH_SIZE, fake_acc/BATCH_SIZE
+        return real_acc/global_vars.BATCH_SIZE, fake_acc/global_vars.BATCH_SIZE
 
     def generator_loss(self, proposed_params):
         """ Generator loss """
-        generated_regions = self.generator.simulate_batch(BATCH_SIZE, \
+        generated_regions = self.generator.simulate_batch(global_vars.BATCH_SIZE, \
             params=proposed_params)
         # not training when we use the discriminator here
         fake_output = self.discriminator(generated_regions, training=False)
@@ -359,7 +276,7 @@ class PG_GAN:
 
         with tf.GradientTape() as disc_tape:
             # use current params
-            generated_regions = self.generator.simulate_batch(BATCH_SIZE)
+            generated_regions = self.generator.simulate_batch(global_vars.BATCH_SIZE)
 
             real_output = self.discriminator(real_regions, training=True)
             fake_output = self.discriminator(generated_regions, training=True)

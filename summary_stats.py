@@ -16,97 +16,19 @@ import seaborn as sns
 import sys
 
 # our imports
-import real_data_random
+import global_vars
 # import simulate_py_from_MSMC_IM
-import simulation
+#import simulation
 import ss_helpers
 import util
 
 # globals
-NUM_SNPS = 36
 NUM_TRIAL = 5000
-L = 50000
 NAMES = ["Tajima's D", r'pairwise heterozygosity ($\pi$)', \
     "number of haplotypes"]
 
-# prefix for real data
-global PREFIX
-PREFIX = ""
-
-COLORS = {"YRI": 'darkorange',"CEU": 'blue',"CHB": 'green'}
-SIM_COLOR = 'gray'
-
 # for ooa2 (YRI/CEU)
 FSC_PARAMS = [21017, 0.0341901, 3105.5, 21954, 33077.5, 2844, 1042]
-
-# TODO make this more general and object oriented (no duplicated code!)
-
-def process_opts(opts):
-
-    # parameter defaults
-    all_params = util.ParamSet()
-    parameters = util.parse_params(opts.params, all_params) # desired params
-    param_names = [p.name for p in parameters]
-
-    filter = False # for filtering singletons
-
-    # parse model and simulator
-    if opts.model == 'const':
-        sample_sizes = [198]
-        simulator = simulation.simulate_const
-        #print("FILTERING SINGLETONS")
-        #filter = True
-
-    elif opts.model == 'exp':
-        sample_sizes = [198]
-        simulator = simulation.simulate_exp
-        #print("FILTERING SINGLETONS")
-        #filter = True
-
-    # isolation-with-migration model (2 populations)
-    elif opts.model == 'im':
-        sample_sizes = [98,98]
-        simulator = simulation.simulate_im
-
-    # out-of-Africa model (2 populations)
-    elif opts.model in ['ooa2', 'fsc']:
-        sample_sizes = [98,98]
-        simulator = simulation.simulate_ooa2
-
-    # MSMC
-    elif opts.model == 'msmc':
-        print("\nALERT you are running MSMC sim!\n")
-        sample_sizes = [98,98]
-        simulator = simulate_py_from_MSMC_IM.simulate_msmc
-
-    # CEU/CHB (2 populations)
-    elif opts.model == 'post_ooa':
-        sample_sizes = [98,98]
-        simulator = simulation.simulate_postOOA
-
-    # out-of-Africa model (3 populations)
-    elif opts.model == 'ooa3':
-        sample_sizes = [66,66,66]
-        simulator = simulation.simulate_ooa3
-
-    # no other options
-    else:
-        sys.exit(opts.model + " is not recognized")
-
-    # if real data provided
-    iterator = real_data_random.RealDataRandomIterator(NUM_SNPS, \
-        opts.data_h5, opts.bed, frac_test=0.1)
-    num_samples = iterator.num_samples
-
-    global PREFIX
-    PREFIX = opts.data_h5.split("/")[-1].split(".")[0]
-    #iterator = None
-
-    generator = simulation.Generator(simulator, param_names, sample_sizes, \
-        NUM_SNPS, L, opts.seed, mirror_real=True, reco_folder=opts.reco_folder,\
-        filter=filter)
-
-    return generator, iterator, parameters
 
 def main():
     input_file = sys.argv[1]
@@ -115,15 +37,22 @@ def main():
     print("output file", output_file)
 
     opts = util.parse_args()
-    generator, iterator, parameters = process_opts(opts)
     
+    generator, _, iterator, parameters = util.process_opts(opts)
+    pop_names = opts.data_h5.split("/")[-1].split(".")[0] \
+                       if opts.data_h5 is not None else ""
+    # sets globals.ss_labels and globals.ss_colors
+    # overwrite this function in globals.py to change
+    global_vars.update_ss_labels(pop_names)
+
     values = ss_helpers.parse_output(input_file)
+
+    generator.update_params(values)
     print("VALUES", values)
     print("made it through params")
 
     # use the parameters we inferred!
     fsc=False
-    generator.update_params(values)
     if opts.model == 'fsc':
         print("\nALERT you are running FSC sim!\n")
         print("FSC PARAMS!", FSC_PARAMS)
@@ -138,17 +67,13 @@ def main():
 
     # sim
     sim_matrices = generator.simulate_batch(NUM_TRIAL, neg1=False)
-    generator.num_snps = None # this activates region_len mode
     sim_matrices_region = generator.simulate_batch(NUM_TRIAL, neg1=False)
 
-    DATA_LABELS = PREFIX.split("_")
-    DATA_LABELS.append("simulation")
-    
     # one pop models
     if opts.model in ['exp', 'const']:
-        real_sfs, real_dist, real_ld, real_stats = ss_helpers.stats_all(real_matrices, real_matrices_region, L)
-        sim_sfs, sim_dist, sim_ld, sim_stats = ss_helpers.stats_all(sim_matrices, sim_matrices_region, L)
-        plot_all_stats(real_stats, real_dist, real_sfs, real_ld, sim_stats, sim_dist, sim_sfs, sim_ld, output_file, DATA_LABELS)
+        real_sfs, real_dist, real_ld, real_stats = ss_helpers.stats_all(real_matrices, real_matrices_region)
+        sim_sfs, sim_dist, sim_ld, sim_stats = ss_helpers.stats_all(sim_matrices, sim_matrices_region)
+        plot_all_stats(real_stats, real_dist, real_sfs, real_ld, sim_stats, sim_dist, sim_sfs, sim_ld, output_file)
 
     # two pop models
     elif opts.model in ['im', 'ooa2', 'post_ooa', 'msmc', 'fsc']:
@@ -176,19 +101,19 @@ def main():
             sim_matrices_region2.append(item[half:,:,:])
 
         # stats for pop 1
-        real_sfs1, real_dist1, real_ld1, real_stats1 = ss_helpers.stats_all(real_matrices1, real_matrices_region1, L)
-        sim_sfs1, sim_dist1, sim_ld1, sim_stats1 = ss_helpers.stats_all(sim_matrices1, sim_matrices_region1, L)
+        real_sfs1, real_dist1, real_ld1, real_stats1 = ss_helpers.stats_all(real_matrices1, real_matrices_region1)
+        sim_sfs1, sim_dist1, sim_ld1, sim_stats1 = ss_helpers.stats_all(sim_matrices1, sim_matrices_region1)
 
         # stats for pop 2
-        real_sfs2, real_dist2, real_ld2, real_stats2 = ss_helpers.stats_all(real_matrices2, real_matrices_region2, L)
-        sim_sfs2, sim_dist2, sim_ld2, sim_stats2 = ss_helpers.stats_all(sim_matrices2, sim_matrices_region2, L)
+        real_sfs2, real_dist2, real_ld2, real_stats2 = ss_helpers.stats_all(real_matrices2, real_matrices_region2)
+        sim_sfs2, sim_dist2, sim_ld2, sim_stats2 = ss_helpers.stats_all(sim_matrices2, sim_matrices_region2)
 
         # two pop stats
         real_fst = ss_helpers.fst_all(real_matrices)
         sim_fst = ss_helpers.fst_all(sim_matrices)
 
         plot_stats_twopop(real_stats1, real_dist1, real_sfs1, real_ld1, real_stats2, real_dist2, real_sfs2, real_ld2, real_fst, \
-            sim_stats1, sim_dist1, sim_sfs1, sim_ld1, sim_stats2, sim_dist2, sim_sfs2, sim_ld2, sim_fst, output_file, DATA_LABELS, fsc=fsc)
+            sim_stats1, sim_dist1, sim_sfs1, sim_ld1, sim_stats2, sim_dist2, sim_sfs2, sim_ld2, sim_fst, output_file, fsc=fsc)
 
     # OOA3
     elif opts.model in ['ooa3']:
@@ -221,16 +146,16 @@ def main():
             sim_matrices_region3.append(item[third*2:,:,:])
 
         # stats for pop 1
-        real_sfs1, real_dist1, real_ld1, real_stats1 = ss_helpers.stats_all(real_matrices1, real_matrices_region1, L)
-        sim_sfs1, sim_dist1, sim_ld1, sim_stats1 = ss_helpers.stats_all(sim_matrices1, sim_matrices_region1, L)
+        real_sfs1, real_dist1, real_ld1, real_stats1 = ss_helpers.stats_all(real_matrices1, real_matrices_region1)
+        sim_sfs1, sim_dist1, sim_ld1, sim_stats1 = ss_helpers.stats_all(sim_matrices1, sim_matrices_region1)
 
         # stats for pop 2
-        real_sfs2, real_dist2, real_ld2, real_stats2 = ss_helpers.stats_all(real_matrices2, real_matrices_region2, L)
-        sim_sfs2, sim_dist2, sim_ld2, sim_stats2 = ss_helpers.stats_all(sim_matrices2, sim_matrices_region2, L)
+        real_sfs2, real_dist2, real_ld2, real_stats2 = ss_helpers.stats_all(real_matrices2, real_matrices_region2)
+        sim_sfs2, sim_dist2, sim_ld2, sim_stats2 = ss_helpers.stats_all(sim_matrices2, sim_matrices_region2)
 
         # stats for pop 3
-        real_sfs3, real_dist3, real_ld3, real_stats3 = ss_helpers.stats_all(real_matrices3, real_matrices_region3, L)
-        sim_sfs3, sim_dist3, sim_ld3, sim_stats3 = ss_helpers.stats_all(sim_matrices3, sim_matrices_region3, L)
+        real_sfs3, real_dist3, real_ld3, real_stats3 = ss_helpers.stats_all(real_matrices3, real_matrices_region3)
+        sim_sfs3, sim_dist3, sim_ld3, sim_stats3 = ss_helpers.stats_all(sim_matrices3, sim_matrices_region3)
 
         # two pop stats
         real_matrices12 = np.concatenate((np.array(real_matrices1), np.array(real_matrices2)), axis=1)
@@ -259,27 +184,29 @@ def main():
             sim_stats3, sim_dist3, sim_sfs3, sim_ld3,
             real_fst12, real_fst13, real_fst23,
             sim_fst12, sim_fst13, sim_fst23,
-            output_file, DATA_LABELS)
+            output_file)
 
     else:
         print("unsupported", opts.model)
 
 # one pop
-def plot_all_stats(real_stats, real_dist, real_sfs, real_ld, sim_stats, sim_dist, sim_sfs, sim_ld, output, data_labels):
+def plot_all_stats(real_stats, real_dist, real_sfs, real_ld, sim_stats, sim_dist, sim_sfs, sim_ld, output):
     fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(7, 7))
 
-    pop = data_labels[0]
-    sim_label = data_labels[-1]
-    
-    color = COLORS[PREFIX]
-
-    ss_helpers.plot_sfs(axes.flatten()[0], real_sfs, sim_sfs, color, SIM_COLOR, pop, sim_label, single=True)
-    ss_helpers.plot_dist(axes.flatten()[1], real_dist, sim_dist, color, SIM_COLOR, pop, sim_label, single=True)
-    ss_helpers.plot_ld(axes.flatten()[2], real_ld, sim_ld, color, SIM_COLOR, pop, sim_label, single=True)
+    ss_helpers.plot_sfs(axes.flatten()[0], real_sfs, sim_sfs,
+        global_vars.ss_colors[0], global_vars.ss_colors[1],
+        global_vars.ss_labels[0], global_vars.ss_labels[1], single=True)
+    ss_helpers.plot_dist(axes.flatten()[1], real_dist, sim_dist,
+        global_vars.ss_colors[0], global_vars.ss_colors[1],
+        global_vars.ss_labels[0], global_vars.ss_labels[1], single=True)
+    ss_helpers.plot_ld(axes.flatten()[2], real_ld, sim_ld,
+        global_vars.ss_colors[0], global_vars.ss_colors[1],
+        global_vars.ss_labels[0], global_vars.ss_labels[1], single=True)
 
     for i in range(3):
-        ss_helpers.plot_generic(axes.flatten()[i+3], NAMES[i], real_stats[i], sim_stats[i], color, SIM_COLOR,
-            pop, sim_label, single=True)
+        ss_helpers.plot_generic(axes.flatten()[i+3], NAMES[i], real_stats[i], sim_stats[i],
+                                global_vars.ss_colors[0], global_vars.ss_colors[1],
+                                global_vars.ss_labels[0], global_vars.ss_labels[1], single=True)
 
     plt.tight_layout()
     if output != None:
@@ -289,60 +216,65 @@ def plot_all_stats(real_stats, real_dist, real_sfs, real_ld, sim_stats, sim_dist
 
 # two pop
 def plot_stats_twopop(real_stats1, real_dist1, real_sfs1, real_ld1, real_stats2, real_dist2, real_sfs2, real_ld2, real_fst, \
-    sim_stats1, sim_dist1, sim_sfs1, sim_ld1, sim_stats2, sim_dist2, sim_sfs2, sim_ld2, sim_fst, output, data_labels, fsc=False):
+    sim_stats1, sim_dist1, sim_sfs1, sim_ld1, sim_stats2, sim_dist2, sim_sfs2, sim_ld2, sim_fst, output, fsc=False):
 
-    POP1 = data_labels[0]
-    POP2 = data_labels[1]
+    pop1_label = global_vars.ss_labels[0]
+    pop2_label = global_vars.ss_labels[1]
+    sim_label = global_vars.ss_labels[-1]
 
-    pop_names = PREFIX.split("_")
-    c1 = COLORS[pop_names[0]]
-    c2 = COLORS[pop_names[1]]
+    pop1_color = global_vars.ss_colors[0]
+    pop2_color = global_vars.ss_colors[1]
+    sim_color = global_vars.ss_colors[-1]
 
-    sim_label = data_labels[-1]
-    
-    pop1_real = mpatches.Patch(color=c1, label=POP1)
-    pop2_real = mpatches.Patch(color=c2, label=POP2)
-    pop2_sim = mpatches.Patch(color=SIM_COLOR, label=sim_label)
+    pop1_real = mpatches.Patch(color=pop1_color, label=pop1_label)
+    pop2_real = mpatches.Patch(color=pop2_color, label=pop2_label)
+    pop2_sim = mpatches.Patch(color=sim_color, label=sim_label)
 
     if not fsc:
         fig, axes = plt.subplots(nrows=4, ncols=4, figsize=(14, 10))
         axes_all = axes.flatten() # TODO don't flatten?
 
         # row 1
-        ss_helpers.plot_sfs(axes_all[0], real_sfs1, sim_sfs1, c1, SIM_COLOR, pop=POP1, sim_label=sim_label)
-        ss_helpers.plot_dist(axes_all[1], real_dist1, sim_dist1, c1, SIM_COLOR, pop=POP1, sim_label=sim_label)
-        ss_helpers.plot_sfs(axes_all[2], real_sfs2, sim_sfs2, c2, SIM_COLOR, pop=POP2, sim_label=sim_label)
-        ss_helpers.plot_dist(axes_all[3], real_dist2, sim_dist2, c2, SIM_COLOR, pop=POP2, sim_label=sim_label)
+        ss_helpers.plot_sfs(axes_all[0], real_sfs1, sim_sfs1, pop1_color,
+            sim_color, pop=pop1_label, sim_label=sim_label)
+        ss_helpers.plot_dist(axes_all[1], real_dist1, sim_dist1, pop1_color,
+            sim_color, pop=pop1_label, sim_label=sim_label)
+        ss_helpers.plot_sfs(axes_all[2], real_sfs2, sim_sfs2, pop2_color,
+            sim_color, pop=pop2_label, sim_label=sim_label)
+        ss_helpers.plot_dist(axes_all[3], real_dist2, sim_dist2, pop2_color,
+            sim_color, pop=pop2_label, sim_label=sim_label)
 
         # row 2
-        ss_helpers.plot_ld(axes_all[4], real_ld1, sim_ld1, c1, SIM_COLOR, pop=POP1, sim_label=sim_label)
-        ss_helpers.plot_generic(axes_all[5], NAMES[0], real_stats1[0], sim_stats1[0], c1, SIM_COLOR, pop=POP1,
-            sim_label=sim_label)
-        ss_helpers.plot_ld(axes_all[6], real_ld2, sim_ld2, c2, SIM_COLOR, pop=POP2, sim_label=sim_label)
-        ss_helpers.plot_generic(axes_all[7], NAMES[0], real_stats2[0], sim_stats2[0], c2, SIM_COLOR, pop=POP2,
-            sim_label=sim_label)
+        ss_helpers.plot_ld(axes_all[4], real_ld1, sim_ld1, pop1_color,
+            sim_color, pop=pop1_label, sim_label=sim_label)
+        ss_helpers.plot_generic(axes_all[5], NAMES[0], real_stats1[0],
+            sim_stats1[0], pop1_color, sim_color, pop=pop1_label, sim_label=sim_label)
+        ss_helpers.plot_ld(axes_all[6], real_ld2, sim_ld2, pop2_color,
+            sim_color, pop=pop2_label, sim_label=sim_label)
+        ss_helpers.plot_generic(axes_all[7], NAMES[0], real_stats2[0],
+            sim_stats2[0], pop2_color, sim_color, pop=pop2_label, sim_label=sim_label)
 
         # row 3
-        ss_helpers.plot_generic(axes_all[8], NAMES[1], real_stats1[1], sim_stats1[1], c1, SIM_COLOR, pop=POP1,
-            sim_label=sim_label)
-        ss_helpers.plot_generic(axes_all[9], NAMES[2], real_stats1[2], sim_stats1[2], c1, SIM_COLOR, pop=POP1,
-            sim_label=sim_label)
-        ss_helpers.plot_generic(axes_all[10], NAMES[1], real_stats2[1], sim_stats2[1], c2, SIM_COLOR, pop=POP2,
-            sim_label=sim_label)
-        ss_helpers.plot_generic(axes_all[11], NAMES[2], real_stats2[2], sim_stats2[2], c2, SIM_COLOR, pop=POP2,
-            sim_label=sim_label)
+        ss_helpers.plot_generic(axes_all[8], NAMES[1], real_stats1[1],
+            sim_stats1[1], pop1_color, sim_color, pop=pop1_label, sim_label=sim_label)
+        ss_helpers.plot_generic(axes_all[9], NAMES[2], real_stats1[2],
+            sim_stats1[2], pop1_color, sim_color, pop=pop1_label, sim_label=sim_label)
+        ss_helpers.plot_generic(axes_all[10], NAMES[1], real_stats2[1],
+            sim_stats2[1], pop2_color, sim_color, pop=pop2_label, sim_label=sim_label)
+        ss_helpers.plot_generic(axes_all[11], NAMES[2], real_stats2[2],
+            sim_stats2[2], pop2_color, sim_color, pop=pop2_label, sim_label=sim_label)
 
         # row 4
-        ss_helpers.plot_fst(axes_all[13], real_fst, sim_fst, POP1+"/"+POP2, sim_label, "purple", SIM_COLOR)
+        ss_helpers.plot_fst(axes_all[13], real_fst, sim_fst, pop1_label+"/"+pop2_label, sim_label, "purple", sim_color)
         axes_all[12].axis('off')
         axes_all[14].axis('off')
         axes_all[15].axis('off')
 
         # overall legend
-        pop1_real = mpatches.Patch(color=c1, label=POP1 + ' real data')
-        pop1_sim = mpatches.Patch(color=SIM_COLOR, label=POP1 + ' sim data')
-        pop2_real = mpatches.Patch(color=c2, label=POP2 + ' real data')
-        pop2_sim = mpatches.Patch(color=SIM_COLOR, label=POP2 + ' sim data')
+        pop1_real = mpatches.Patch(color=pop1_color, label=pop1_label + ' real data')
+        pop1_sim = mpatches.Patch(color=sim_color, label=pop1_label + ' sim data')
+        pop2_real = mpatches.Patch(color=pop2_color, label=pop2_label + ' real data')
+        pop2_sim = mpatches.Patch(color=sim_color, label=pop2_label + ' sim data')
         axes_all[12].legend(handles=[pop1_real, pop1_sim], loc=10, prop={'size': 18})
         axes_all[15].legend(handles=[pop2_real, pop2_sim], loc=10, prop={'size': 18})
 
@@ -353,8 +285,8 @@ def plot_stats_twopop(real_stats1, real_dist1, real_sfs1, real_ld1, real_stats2,
         axes_all = axes.flatten() # TODO don't flatten?
 
         # row 1
-        ss_helpers.plot_sfs(axes_all[0], real_sfs1, sim_sfs1, c1, SIM_COLOR, pop=POP1, sim_label=sim_label)
-        ss_helpers.plot_sfs(axes_all[1], real_sfs2, sim_sfs2, c2, SIM_COLOR, pop=POP2, sim_label=sim_label)
+        ss_helpers.plot_sfs(axes_all[0], real_sfs1, sim_sfs1, pop1_color, sim_color, pop=pop1_label, sim_label=sim_label)
+        ss_helpers.plot_sfs(axes_all[1], real_sfs2, sim_sfs2, pop2_color, sim_color, pop=pop2_label, sim_label=sim_label)
         axes_all[2].axis('off')
         axes_all[2].legend(handles=[pop1_real, pop2_real, pop2_sim], loc=10, prop={'size': 16})
 
@@ -375,72 +307,83 @@ def plot_stats_threepop(
     sim_stats3, sim_dist3, sim_sfs3, sim_ld3,
     real_fst12, real_fst13, real_fst23,
     sim_fst12, sim_fst13, sim_fst23,
-    output, data_labels):
+    output):
 
     fig, axes = plt.subplots(nrows=6, ncols=4, figsize=(14, 14))
 
-    POP1 = data_labels[0]
-    POP2 = data_labels[1]
-    POP3 = data_labels[2]
+    pop1_label = global_vars.ss_labels[0]
+    pop2_label = global_vars.ss_labels[1]
+    pop3_label = global_vars.ss_labels[2]
+    sim_label = global_vars.ss_labels[-1]
 
-    pop_names = PREFIX.split("_")
-    c1 = COLORS[pop_names[0]]
-    c2 = COLORS[pop_names[1]]
-    c3 = COLORS[pop_names[2]]
+    pop1_color = global_vars.ss_colors[0]
+    pop2_color = global_vars.ss_colors[1]
+    pop3_color = global_vars.ss_colors[2]
+    sim_color = global_vars.ss_colors[-1]
 
-    sim_label = data_labels[-1]
-    
     # pop 1
-    ss_helpers.plot_sfs(axes[0][0], real_sfs1, sim_sfs1, c1, SIM_COLOR, pop=POP1, sim_label=sim_label)
-    ss_helpers.plot_dist(axes[0][1], real_dist1, sim_dist1, c1, SIM_COLOR, pop=POP1, sim_label=sim_label)
-    ss_helpers.plot_ld(axes[1][0], real_ld1, sim_ld1, c1, SIM_COLOR, pop=POP1, sim_label=sim_label)
-    ss_helpers.plot_generic(axes[1][1], NAMES[0], real_stats1[0], sim_stats1[0], c1, SIM_COLOR, pop=POP1,
-        sim_label=sim_label)
-    ss_helpers.plot_generic(axes[2][0], NAMES[1], real_stats1[1], sim_stats1[1], c1, SIM_COLOR, pop=POP1,
-        sim_label=sim_label)
-    ss_helpers.plot_generic(axes[2][1], NAMES[2], real_stats1[2], sim_stats1[2], c1, SIM_COLOR, pop=POP1,
-        sim_label=sim_label)
+    ss_helpers.plot_sfs(axes[0][0], real_sfs1, sim_sfs1, pop1_color,
+        sim_color, pop=pop1_label, sim_label=sim_label)
+    ss_helpers.plot_dist(axes[0][1], real_dist1, sim_dist1, pop1_color,
+        sim_color, pop=pop1_label, sim_label=sim_label)
+    ss_helpers.plot_ld(axes[1][0], real_ld1, sim_ld1, pop1_color, sim_color,
+        pop=pop1_label, sim_label=sim_label)
+    ss_helpers.plot_generic(axes[1][1], NAMES[0], real_stats1[0], sim_stats1[0],
+        pop1_color, sim_color, pop=pop1_label, sim_label=sim_label)
+    ss_helpers.plot_generic(axes[2][0], NAMES[1], real_stats1[1], sim_stats1[1],
+        pop1_color, sim_color, pop=pop1_label, sim_label=sim_label)
+    ss_helpers.plot_generic(axes[2][1], NAMES[2], real_stats1[2],
+        sim_stats1[2], pop1_color, sim_color, pop=pop1_label, sim_label=sim_label)
 
     # pop 2
-    ss_helpers.plot_sfs(axes[0][2], real_sfs2, sim_sfs2, c2, SIM_COLOR, pop=POP2, sim_label=sim_label)
-    ss_helpers.plot_dist(axes[0][3], real_dist2, sim_dist2, c2, SIM_COLOR, pop=POP2, sim_label=sim_label)
-    ss_helpers.plot_ld(axes[1][2], real_ld2, sim_ld2, c2, SIM_COLOR, pop=POP2, sim_label=sim_label)
-    ss_helpers.plot_generic(axes[1][3], NAMES[0], real_stats2[0], sim_stats2[0], c2, SIM_COLOR, pop=POP2,
-        sim_label=sim_label)
-    ss_helpers.plot_generic(axes[2][2], NAMES[1], real_stats2[1], sim_stats2[1], c2, SIM_COLOR, pop=POP2,
-        sim_label=sim_label)
-    ss_helpers.plot_generic(axes[2][3], NAMES[2], real_stats2[2], sim_stats2[2], c2, SIM_COLOR, pop=POP2,
-        sim_label=sim_label)
+    ss_helpers.plot_sfs(axes[0][2], real_sfs2, sim_sfs2, pop2_color, sim_color,
+        pop=pop2_label, sim_label=sim_label)
+    ss_helpers.plot_dist(axes[0][3], real_dist2, sim_dist2, pop2_color, sim_color,
+        pop=pop2_label, sim_label=sim_label)
+    ss_helpers.plot_ld(axes[1][2], real_ld2, sim_ld2, pop2_color, sim_color,
+        pop=pop2_label, sim_label=sim_label)
+    ss_helpers.plot_generic(axes[1][3], NAMES[0], real_stats2[0], sim_stats2[0],
+        pop2_color, sim_color, pop=pop2_label, sim_label=sim_label)
+    ss_helpers.plot_generic(axes[2][2], NAMES[1], real_stats2[1], sim_stats2[1],
+        pop2_color, sim_color, pop=pop2_label, sim_label=sim_label)
+    ss_helpers.plot_generic(axes[2][3], NAMES[2], real_stats2[2], sim_stats2[2],
+        pop2_color, sim_color, pop=pop2_label, sim_label=sim_label)
 
     # pop 3
-    ss_helpers.plot_sfs(axes[3][2], real_sfs3, sim_sfs3, c3, SIM_COLOR, pop=POP3, sim_label=sim_label)
-    ss_helpers.plot_dist(axes[3][3], real_dist3, sim_dist3, c3, SIM_COLOR, pop=POP3, sim_label=sim_label)
-    ss_helpers.plot_ld(axes[4][2], real_ld3, sim_ld3, c3, SIM_COLOR, pop=POP3, sim_label=sim_label)
-    ss_helpers.plot_generic(axes[4][3], NAMES[0], real_stats3[0], sim_stats3[0], c3, SIM_COLOR, pop=POP3,
-        sim_label=sim_label)
-    ss_helpers.plot_generic(axes[5][2], NAMES[1], real_stats3[1], sim_stats3[1], c3, SIM_COLOR, pop=POP3,
-        sim_label=sim_label)
-    ss_helpers.plot_generic(axes[5][3], NAMES[2], real_stats3[2], sim_stats3[2], c3, SIM_COLOR, pop=POP3,
-        sim_label=sim_label)
+    ss_helpers.plot_sfs(axes[3][2], real_sfs3, sim_sfs3, pop3_color, sim_color,
+        pop=pop3_label, sim_label=sim_label)
+    ss_helpers.plot_dist(axes[3][3], real_dist3, sim_dist3, pop3_color, sim_color,
+        pop=pop3_label, sim_label=sim_label)
+    ss_helpers.plot_ld(axes[4][2], real_ld3, sim_ld3, pop3_color, sim_color,
+        pop=pop3_label, sim_label=sim_label)
+    ss_helpers.plot_generic(axes[4][3], NAMES[0], real_stats3[0], sim_stats3[0],
+        pop3_color, sim_color, pop=pop3_label, sim_label=sim_label)
+    ss_helpers.plot_generic(axes[5][2], NAMES[1], real_stats3[1], sim_stats3[1],
+        pop3_color, sim_color, pop=pop3_label, sim_label=sim_label)
+    ss_helpers.plot_generic(axes[5][3], NAMES[2], real_stats3[2], sim_stats3[2],
+        pop3_color, sim_color, pop=pop3_label, sim_label=sim_label)
 
     # fst 4
-    ss_helpers.plot_fst(axes[3][0], real_fst12, sim_fst12, POP1+"/"+POP2, "simulated", "purple", SIM_COLOR,
-        sim_label=sim_label)
-    ss_helpers.plot_fst(axes[4][0], real_fst13, sim_fst13, POP1+"/"+POP3, "simulated", "purple", SIM_COLOR,
-        sim_label=sim_label)
-    ss_helpers.plot_fst(axes[5][0], real_fst23, sim_fst23, POP2+"/"+POP3, "simulated", "purple", SIM_COLOR,
-        sim_label=sim_label)
+    ss_helpers.plot_fst(axes[3][0], real_fst12, sim_fst12,
+        real_label=pop1_label+"/"+pop2_label, sim_label=sim_label,
+        real_color="purple", sim_color=sim_color)
+    ss_helpers.plot_fst(axes[4][0], real_fst13, sim_fst13,
+        real_label=pop1_label+"/"+pop3_label, sim_label=sim_label,
+        real_color="purple", sim_color=sim_color)
+    ss_helpers.plot_fst(axes[5][0], real_fst23, sim_fst23,
+        real_label=pop2_label+"/"+pop3_label, sim_label=sim_label,
+        real_color="purple", sim_color=sim_color)
     axes[3][1].axis('off')
     axes[4][1].axis('off')
     axes[5][1].axis('off')
 
     # overall legend
-    pop1_real = mpatches.Patch(color=c1, label=POP1 + ' real data')
-    pop1_sim = mpatches.Patch(color=SIM_COLOR, label=POP1 + ' sim data')
-    pop2_real = mpatches.Patch(color=c2, label=POP2 + ' real data')
-    pop2_sim = mpatches.Patch(color=SIM_COLOR, label=POP2 + ' sim data')
-    pop3_real = mpatches.Patch(color=c3, label=POP3 + ' real data')
-    pop3_sim = mpatches.Patch(color=SIM_COLOR, label=POP3 + ' sim data')
+    pop1_real = mpatches.Patch(color=pop1_color, label=pop1_label + ' real data')
+    pop1_sim = mpatches.Patch(color=sim_color, label=pop1_label + ' sim data')
+    pop2_real = mpatches.Patch(color=pop2_color, label=pop2_label + ' real data')
+    pop2_sim = mpatches.Patch(color=sim_color, label=pop2_label + ' sim data')
+    pop3_real = mpatches.Patch(color=pop3_color, label=pop3_label + ' real data')
+    pop3_sim = mpatches.Patch(color=sim_color, label=pop3_label + ' sim data')
     axes[3][1].legend(handles=[pop1_real, pop1_sim], loc=10, prop={'size': 18})
     axes[4][1].legend(handles=[pop2_real, pop2_sim], loc=10, prop={'size': 18})
     axes[5][1].legend(handles=[pop3_real, pop3_sim], loc=10, prop={'size': 18})

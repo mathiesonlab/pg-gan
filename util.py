@@ -10,6 +10,11 @@ import sys
 
 from scipy.stats import norm
 
+import discriminators
+import global_vars
+import real_data_random
+import simulation
+
 class Parameter:
     """Holds information about evolutionary parameters to infer"""
 
@@ -196,15 +201,18 @@ def filter_func(x, rate): # currently not used
         return True
     return np.random.random() >= rate # keep (1-rate) of singletons
 
-def process_gt_dist(gt_matrix, dist_vec, S, filter=False, rate=None, neg1=True):
+def process_gt_dist(gt_matrix, dist_vec, real=False, neg1=True):
     """
     Take in a genotype matrix and vector of inter-SNP distances. Return a 3D
     numpy array of the given n (haps) and S (SNPs) and 2 channels.
     Filter singletons at given rate if filter=True
     """
-    if filter:
+    og_snps = gt_matrix.shape[0]
+
+    if (real and global_vars.filter_real_data) or (not real and global_vars.filter_simulated):
         # mask
-        singleton_mask = np.array([filter_func(row, rate) for row in gt_matrix])
+        singleton_mask = np.array([filter_func(row, global_vars.filter_rate, \
+                                   gt_matrix.shape[1] - 1) for row in gt_matrix])
 
         # reassign
         gt_matrix = gt_matrix[singleton_mask]
@@ -212,8 +220,6 @@ def process_gt_dist(gt_matrix, dist_vec, S, filter=False, rate=None, neg1=True):
 
     num_SNPs = gt_matrix.shape[0] # SNPs x n
     n = gt_matrix.shape[1]
-    if S == None:
-        S = num_SNPs # for region_len fixed
 
     # double check
     if num_SNPs != len(dist_vec):
@@ -221,11 +227,11 @@ def process_gt_dist(gt_matrix, dist_vec, S, filter=False, rate=None, neg1=True):
     assert num_SNPs == len(dist_vec)
 
     # set up region
-    region = np.zeros((n, S, 2), dtype=np.float32)
+    region = np.zeros((n, global_vars.NUM_SNPS, 2), dtype=np.float32)
 
     mid = num_SNPs//2
-    half_S = S//2
-    if S % 2 == 1: # odd
+    half_S = global_vars.NUM_SNPS//2
+    if global_vars.NUM_SNPS % 2 == 1: # odd
         other_half_S = half_S+1
     else:
         other_half_S = half_S
@@ -295,7 +301,8 @@ def parse_args():
     parser.add_option('-t', action="store_true", dest="toy", help='toy example')
     parser.add_option('-s', '--seed', type='int', default=1833, \
         help='seed for RNG')
-
+    parser.add_option('-n', '--sample_size', type='int', help='total sample size (assumes equal pop sizes)')
+    
     (opts, args) = parser.parse_args()
 
     mandatories = ['model','params']
@@ -364,6 +371,99 @@ def read_demo_file(filename, Ne):
             demos.append(msprime.PopulationParametersChange(time=float(time) \
                 * 4 * Ne, initial_size=float(pop) * Ne))
     return demos
+
+def process_opts(opts, summary_stats = False):
+
+    sample_size_total = global_vars.DEFAULT_SAMPLE_SIZE if opts.sample_size is None \
+                        else opts.sample_size
+
+    def get_sample_sizes(num_pops):
+        return [sample_size_total//num_pops for i in range(num_pops)]
+
+    # parameter defaults
+    all_params = ParamSet()
+    parameters = parse_params(opts.params, all_params) # desired params
+    param_names = [p.name for p in parameters]
+
+    real = False
+    # if real data provided
+    if opts.data_h5 is not None: # h5 is None option at end of func
+        real = True
+        # frac test isn't currently used in ss
+        
+        # if summary_stats:
+        #      iterator = real_data_random.RealDataRandomIterator(\
+        #         opts.data_h5, opts.bed, frac_test = \
+        #         globals.frac_test)
+        # else:
+        # most typical case for real data
+        iterator = real_data_random.RealDataRandomIterator(\
+                                      opts.data_h5, opts.bed)
+
+    # parse model and simulator
+    if opts.model == 'const':
+        sample_sizes = get_sample_sizes(num_pops = 1)
+        discriminator = discriminators.OnePopModel() if not summary_stats else None
+        simulator = simulation.simulate_const
+
+    # exp growth
+    elif opts.model == 'exp':
+        sample_sizes = get_sample_sizes(num_pops = 1)
+        discriminator = discriminators.OnePopModel() if not summary_stats else None
+        simulator = simulation.simulate_exp
+
+    # isolation-with-migration model (2 populations)
+    elif opts.model == 'im':
+        sample_sizes = get_sample_sizes(num_pops = 2)
+        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
+                        sample_sizes[1])  if not summary_stats else None
+        simulator = simulation.simulate_im
+
+    # out-of-Africa model (2 populations)
+    elif opts.model in ['ooa2', 'fsc']:
+        sample_sizes = get_sample_sizes(num_pops = 2)
+        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
+                        sample_sizes[1]) if not summary_stats else None
+        simulator = simulation.simulate_ooa2
+
+    # MSMC
+    # elif opts.model == 'msmc':
+    #     print("\nALERT you are running MSMC sim!\n")
+    #     sample_sizes = get_sample_sizes(sample_size_total, 2)
+    #     simulator = simulate_py_from_MSMC_IM.simulate_msmc
+
+    # CEU/CHB (2 populations)
+    elif opts.model == 'post_ooa':
+        sample_sizes = get_sample_sizes(num_pops = 2)
+        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
+                        sample_sizes[1]) if not summary_stats else None
+        simulator = simulation.simulate_postOOA
+
+    # out-of-Africa model (3 populations)
+    elif opts.model == 'ooa3':
+        sample_sizes = get_sample_sizes(num_pops = 3)
+        discriminator = discriminators.ThreePopModel(sample_sizes[0], \
+                        sample_sizes[1], sample_sizes[2]) if not summary_stats else None
+        simulator = simulation.simulate_ooa3
+
+    # no other options
+    else:
+        sys.exit(opts.model + " is not recognized")
+
+    if (global_vars.filter_simulated or global_vars.filter_real_data):
+        print("FILTERING SINGLETONS")
+
+    # generator
+    generator = simulation.Generator(simulator, param_names, sample_sizes,\
+                                     opts.seed, mirror_real=real, \
+                                      reco_folder=opts.reco_folder)
+
+    if opts.data_h5 == None:
+        # "real data" is simulated wiwh fixed params
+        iterator = simulation.Generator(simulator, param_names, sample_sizes, \
+                                        opts.seed) # don't need reco_folder
+
+    return generator, discriminator, iterator, parameters
 
 if __name__ == "__main__":
     # test major/minor and post-processing
