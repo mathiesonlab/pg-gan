@@ -31,7 +31,7 @@ Override by commenting out the function body,
 and adding in your definitions. Leave the assert
 at the end.
 '''
-def update_ss_labels(pop_names):    
+def update_ss_labels(pop_names):
     # ss_labels is a list of string labels, ex ["CEU", "YRI", "CHB", "simulation"]
     # or ["msprime", "SLiM"]
     ss_labels.extend(pop_names.split("_"))
@@ -42,13 +42,13 @@ def update_ss_labels(pop_names):
     # ss_colors = []
     for label in ss_labels:
         ss_colors.append(COLOR_DICT[label])
-    
+
     assert len(ss_labels) == len(ss_colors)
 
 # to use custom trial data, switch overwrite_trial_data to True and
 # change the trial_data dictionary to have the values desired.
 # Model, params, and param_values must be defined
-overwrite_trial_data = True
+overwrite_trial_data = False
 trial_data = { 'model': 'const', 'params': 'Ne', 'data_h5': None,
                'bed_file': None, 'reco_folder': None, 'param_values': '10000.'}
 
@@ -67,4 +67,3 @@ if __name__ == "__main__":
     update_ss_labels("CEU")
     print(ss_labels)
     print(ss_colors)
-        
