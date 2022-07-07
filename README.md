@@ -130,22 +130,44 @@ After running `pg-gan`, the resulting parameters can be used to simulate data, w
 ~~~
 python3 pg_gan.py -m const -p Ne -d CHB.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.h5 -b 20120824_strict_mask.bed -r genetic_map/ > chb_const.out
 
-python3 summary_stats.py chb_const.out chb_const.png -m const -p Ne -d CHB.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.h5 -b 20120824_strict_mask.bed -r genetic_map/
+python3 summary_stats.py chb_const.out chb_const.png
 ~~~
 
 ![CHB, CONST model](figs/chb_const.png)
 
-The second command with `summary_stats.py` generates a plot (similar to the one below). The input file is `chb_const.out` and the output file is `chb_const.png`, but the rest of the command line arguments are the same as `pg-gan`.
+The second command with `summary_stats.py` generates a plot (similar to the one below). The input file is `chb_const.out` and the output file is `chb_const.png`.
 
 Here is another example with the EXP model instead of CONST:
 
 ~~~
 python3 pg_gan.py -m exp -p N1,N2,growth,T1,T2 -d CHB.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.h5 -b 20120824_strict_mask.bed -r genetic_map/ > chb_exp.out
 
-python3 summary_stats.py chb_exp.out chb_exp.png -m exp -p N1,N2,growth,T1,T2 -d CHB.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.h5 -b 20120824_strict_mask.bed -r genetic_map/
+python3 summary_stats.py chb_exp.out chb_exp.png
 ~~~
 
 ![CHB, EXP model](figs/chb_exp.png)
+
+### Aside: Testing/customization in Summary Stats
+By default, `summary_stats` will use the same arguments used in the input file, but command line arguments can be used to override the original settings if desired -- usually for testing purposes.
+`python3 summary_stats.py chb_const.out chb_const.png -b alternate_mask.bed`
+Additionally, in some situations (usually testing), it may be desirable to not read from an input file at all, and instead use a static set of arguments and parameters. This can be arranged with the file `global_vars.py`, lines 48-50. Set the variable `overwrite_trial_data = True`, and then adjust the dictionary `trial_data` as needed.
+~~~
+overwrite_trial_data = True
+trial_data = { 'model': 'const', 'params': 'Ne', 'data_h5': 'CHB.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.h5',
+               'bed_file': '20120824_strict_mask.bed', 'reco_folder': 'genetic_map/', 'param_values': '10000.'}
+~~~
+The program will ignore the given input file, and instead use the arguments provided in `global_vars.py`. As before, any command line arguments provided will override those from the file.
+`python3 summary_stats.py ignore_file.out sample.png`
+
+The `global_vars.py` file also allows customization of the population labels and colors used by `summary_stats`. It is recommended to comment out lines 36-42, then to add your own custom labels and colors at the end of the function definition. Leave the assert statement on line 43, and be sure to always use the `extend` or `append` methods to mutate the lists, instead of overwriting the lists (which will silently fail.) For example:
+~~~
+  # after global_vars.py, line 42...
+  ss_labels.extend(["sample_A", "sample_B"])
+  ss_colors.extend(["red", "blue"])
+
+  assert len(ss_labels) == len(ss_colors) # leave this assert at the end
+~~~
+You can also edit the `COLORS_DICT` variable on line 24 to contain your population name and its corresponding color.
 
 ## Creating your own models
 
@@ -155,33 +177,37 @@ those in the `util.py` file (although more can be added as needed), and the `sam
   of populations). The other parameters of the function can be ignored unless the user wants to customize them.
 
 ~~~
-def simulate_const(params, sample_sizes, L, seed, prior=[], weights=[]):
+def simulate_const(params, sample_sizes, seed, reco):
     assert len(sample_sizes) == 1
-
-    # sample reco or use value
-    if prior != []:
-        reco = draw_background_rate_from_prior(prior, weights)
-    else:
-        reco = params.reco.value
 
     # simulate data
     ts = msprime.simulate(sample_size=sum(sample_sizes), Ne=params.Ne.value, \
-        length=L, mutation_rate=params.mut.value, recombination_rate=reco, \
+        length=global_vars.L, mutation_rate=params.mut.value, recombination_rate=reco, \
         random_seed = seed)
 
     return ts
 ~~~
 
-After adding this function, register it in the `process_opts` function of `pg_gan.py` as a new option. For one-population models use the `OnePopModel`
+After adding this function, register it in the `process_opts` function of `util.py` as a new option. For one-population models use the `OnePopModel`
 discriminator, for two-population models use `TwoPopModel`, and for three-population models use `ThreePopModel`. The `sample_sizes` variable
-should be a list of integers matching the number of haplotypes in each population.
+should be a list of integers matching the number of haplotypes in each population. If the distribution of haplotypes is even between the populations, the internal function `get_sample_sizes` can be used. In this case, be sure to either specify the total number of samples with the command argument flag `-n`, or in `global_vars.DEFAULT_SAMPLE_SIZE` (see aside.)
 
 ~~~
 if opts.model == 'const':
-    sample_sizes = [198]
-    discriminator = discriminators.OnePopModel()
+    sample_sizes = get_sample_sizes(num_pops = 1) # [198]
+    discriminator = discriminators.OnePopModel() if not summary_stats else None
     simulator = simulation.simulate_const
 ~~~
+### Aside: Further customization
+It is sometimes desirable to use a longer region length, a smaller batch size, a different default sample size, etc. Many such values can be overwritten in the `global_vars.py` file:
+~~~
+...
+L = 50000           # heuristic to get enough SNPs for simulations (50,000 or fifty-thousand)
+BATCH_SIZE = 50
+DEFAULT_SAMPLE_SIZE = 198
+...
+~~~
+Changes made in the `global_vars.py` file will be used in the entire program (it is recommended to keep values consistent between runs of the `pg_gan` and `summary_stats`, as it will not check the same global variable values were used.)
 
 ## General notes
 

@@ -25,8 +25,7 @@ COLOR_DICT = {"YRI": 'darkorange',"CEU": 'blue',"CHB": 'green', "MXL": 'red', "s
 
 ss_labels = []
 ss_colors = []
-'''Default as CEU so that we get some color
-
+'''
 Override by commenting out the function body,
 and adding in your definitions. Leave the assert
 at the end.
@@ -37,9 +36,7 @@ def update_ss_labels(pop_names):
     ss_labels.extend(pop_names.split("_"))
     ss_labels.append("simulation")
 
-
     # colors for plotting, ex ["blue", "darkorange", "green", "gray"] (last is traditionally gray)
-    # ss_colors = []
     for label in ss_labels:
         ss_colors.append(COLOR_DICT[label])
 
