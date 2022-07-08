@@ -45,7 +45,7 @@ class Generator:
         if mirror_real and reco_folder != None:
             pop = reco_folder[-4: -1]
 
-            if global_vars.new_data:
+            if global_vars.NEW_DATA:
                 files = [reco_folder + pop + \
                   "_recombination_map_hapmap_format_hg38_chr_" + str(i) + \
                   ".txt" for i in global_vars.CHROM_RANGE]
@@ -96,7 +96,7 @@ class Generator:
             return reco
 
         return draw_background_rate_from_prior(self.prior, self.weights)
-    
+
 def draw_background_rate_from_prior(prior_rates, prob):
     return np.random.choice(prior_rates, p=prob)
 

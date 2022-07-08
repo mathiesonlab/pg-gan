@@ -35,21 +35,21 @@ def main():
     print("input file", input_file)
     print("output file", output_file)
 
-    if global_vars.overwrite_trial_data:
-        in_file_data = global_vars.trial_data
-        value_strs = global_vars.trial_data['param_values'].split(',')
+    if global_vars.OVERWRITE_TRIAL_DATA:
+        in_file_data = global_vars.TRIAL_DATA
+        value_strs = global_vars.TRIAL_DATA['param_values'].split(',')
         param_values = [float(value_str) for value_str in value_strs]
         assert len(param_values) == len(in_file_data['params'].split(','))
     else:
         param_values, in_file_data = ss_helpers.parse_output(input_file)
 
     opts, param_values = util.parse_args(in_file_data = in_file_data, param_values = param_values)
-    
+
     generator, _, iterator, parameters = util.process_opts(opts, summary_stats = True)
 
     pop_names = opts.data_h5.split("/")[-1].split(".")[0] \
                        if opts.data_h5 is not None else ""
-    # sets globals.ss_labels and globals.ss_colors
+    # sets global_vars.SS_LABELS and global_vars.SS_COLORS
     # overwrite this function in globals.py to change
     global_vars.update_ss_labels(pop_names)
 
@@ -200,19 +200,19 @@ def plot_all_stats(real_stats, real_dist, real_sfs, real_ld, sim_stats, sim_dist
     fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(7, 7))
 
     ss_helpers.plot_sfs(axes.flatten()[0], real_sfs, sim_sfs,
-        global_vars.ss_colors[0], global_vars.ss_colors[1],
-        global_vars.ss_labels[0], global_vars.ss_labels[1], single=True)
+        global_vars.SS_COLORS[0], global_vars.SS_COLORS[1],
+        global_vars.SS_LABELS[0], global_vars.SS_LABELS[1], single=True)
     ss_helpers.plot_dist(axes.flatten()[1], real_dist, sim_dist,
-        global_vars.ss_colors[0], global_vars.ss_colors[1],
-        global_vars.ss_labels[0], global_vars.ss_labels[1], single=True)
+        global_vars.SS_COLORS[0], global_vars.SS_COLORS[1],
+        global_vars.SS_LABELS[0], global_vars.SS_LABELS[1], single=True)
     ss_helpers.plot_ld(axes.flatten()[2], real_ld, sim_ld,
-        global_vars.ss_colors[0], global_vars.ss_colors[1],
-        global_vars.ss_labels[0], global_vars.ss_labels[1], single=True)
+        global_vars.SS_COLORS[0], global_vars.SS_COLORS[1],
+        global_vars.SS_LABELS[0], global_vars.SS_LABELS[1], single=True)
 
     for i in range(3):
         ss_helpers.plot_generic(axes.flatten()[i+3], NAMES[i], real_stats[i], sim_stats[i],
-                                global_vars.ss_colors[0], global_vars.ss_colors[1],
-                                global_vars.ss_labels[0], global_vars.ss_labels[1], single=True)
+                                global_vars.SS_COLORS[0], global_vars.SS_COLORS[1],
+                                global_vars.SS_LABELS[0], global_vars.SS_LABELS[1], single=True)
 
     plt.tight_layout()
     if output != None:
@@ -224,13 +224,13 @@ def plot_all_stats(real_stats, real_dist, real_sfs, real_ld, sim_stats, sim_dist
 def plot_stats_twopop(real_stats1, real_dist1, real_sfs1, real_ld1, real_stats2, real_dist2, real_sfs2, real_ld2, real_fst, \
     sim_stats1, sim_dist1, sim_sfs1, sim_ld1, sim_stats2, sim_dist2, sim_sfs2, sim_ld2, sim_fst, output, fsc=False):
 
-    pop1_label = global_vars.ss_labels[0]
-    pop2_label = global_vars.ss_labels[1]
-    sim_label = global_vars.ss_labels[-1]
+    pop1_label = global_vars.SS_LABELS[0]
+    pop2_label = global_vars.SS_LABELS[1]
+    sim_label = global_vars.SS_LABELS[-1]
 
-    pop1_color = global_vars.ss_colors[0]
-    pop2_color = global_vars.ss_colors[1]
-    sim_color = global_vars.ss_colors[-1]
+    pop1_color = global_vars.SS_COLORS[0]
+    pop2_color = global_vars.SS_COLORS[1]
+    sim_color = global_vars.SS_COLORS[-1]
 
     pop1_real = mpatches.Patch(color=pop1_color, label=pop1_label)
     pop2_real = mpatches.Patch(color=pop2_color, label=pop2_label)
@@ -317,15 +317,15 @@ def plot_stats_threepop(
 
     fig, axes = plt.subplots(nrows=6, ncols=4, figsize=(14, 14))
 
-    pop1_label = global_vars.ss_labels[0]
-    pop2_label = global_vars.ss_labels[1]
-    pop3_label = global_vars.ss_labels[2]
-    sim_label = global_vars.ss_labels[-1]
+    pop1_label = global_vars.SS_LABELS[0]
+    pop2_label = global_vars.SS_LABELS[1]
+    pop3_label = global_vars.SS_LABELS[2]
+    sim_label = global_vars.SS_LABELS[-1]
 
-    pop1_color = global_vars.ss_colors[0]
-    pop2_color = global_vars.ss_colors[1]
-    pop3_color = global_vars.ss_colors[2]
-    sim_color = global_vars.ss_colors[-1]
+    pop1_color = global_vars.SS_COLORS[0]
+    pop2_color = global_vars.SS_COLORS[1]
+    pop3_color = global_vars.SS_COLORS[2]
+    sim_color = global_vars.SS_COLORS[-1]
 
     # pop 1
     ss_helpers.plot_sfs(axes[0][0], real_sfs1, sim_sfs1, pop1_color,

@@ -142,7 +142,7 @@ class RealDataRandomIterator:
         # mask
         self.mask_dict = read_mask(bed_file) \
                          if bed_file is not None else None
-        
+
         # useful for fastsimcoal and msmc
         if chrom_starts:
             self.chrom_counts = defaultdict(int)
@@ -198,7 +198,7 @@ class RealDataRandomIterator:
         if start_chrom != end_chrom:
             #print("bad chrom", start_chrom, end_chrom)
             return self.real_region(neg1, region_len) # try again
-                                                                            
+
         hap_data = self.haps_all[start_idx:end_idx_S, :]
         start_base = self.pos_all[start_idx]
         end_base = self.pos_all[end_idx_S]
@@ -206,7 +206,7 @@ class RealDataRandomIterator:
         positions_len = self.pos_all[start_idx:end_idx_len]
         positions_S = self.pos_all[start_idx:end_idx_S] # different if !region_len
 
-        chrom_num = int(start_chrom[3:]) if global_vars.new_data else int(start_chrom)
+        chrom_num = int(start_chrom[3:]) if global_vars.NEW_DATA else int(start_chrom)
         region = Region(chrom_num, start_base, end_base)
         result = region.inside_mask(self.mask_dict)
 

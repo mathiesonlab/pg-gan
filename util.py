@@ -209,9 +209,9 @@ def process_gt_dist(gt_matrix, dist_vec, real=False, neg1=True):
     """
     og_snps = gt_matrix.shape[0]
 
-    if (real and global_vars.filter_real_data) or (not real and global_vars.filter_simulated):
+    if (real and global_vars.FILTER_REAL_DATA) or (not real and global_vars.FILTER_SIMULATED):
         # mask
-        singleton_mask = np.array([filter_func(row, global_vars.filter_rate, \
+        singleton_mask = np.array([filter_func(row, global_vars.FILTER_RATE, \
                                    gt_matrix.shape[1] - 1) for row in gt_matrix])
 
         # reassign
@@ -304,7 +304,7 @@ def parse_args(in_file_data = None, param_values = None):
     parser.add_option('-n', '--sample_size', type='int', help='total sample size (assumes equal pop sizes)')
     parser.add_option('-v', '--param_values', type='string', \
         help='comma separated values corresponding to params')
-    
+
     (opts, args) = parser.parse_args()
 
     # the following section overrides params from the input file with the provided args
@@ -346,7 +346,7 @@ def parse_args(in_file_data = None, param_values = None):
         if arg_values != param_values:
             param_mismatch("PARAM_VALUES", param_values, arg_values)
             param_values = arg_values # override at return
-            
+
     mandatories = ['model','params']
     for m in mandatories:
         if not opts.__dict__[m]:
@@ -358,7 +358,7 @@ def parse_args(in_file_data = None, param_values = None):
         return opts
 
     return opts, param_values
-    
+
 def parse_hapmap_empirical_prior(files):
     """
     Parse recombination maps to create a distribution of recombintion rates to
@@ -435,11 +435,11 @@ def process_opts(opts, summary_stats = False):
     if opts.data_h5 is not None: # h5 is None option at end of func
         real = True
         # frac test isn't currently used in ss
-        
+
         # if summary_stats:
         #      iterator = real_data_random.RealDataRandomIterator(\
         #         opts.data_h5, opts.bed, frac_test = \
-        #         globals.frac_test)
+        #         globals.FRAC_TEST)
         # else:
         # most typical case for real data
         iterator = real_data_random.RealDataRandomIterator(\
@@ -495,7 +495,7 @@ def process_opts(opts, summary_stats = False):
     else:
         sys.exit(opts.model + " is not recognized")
 
-    if (global_vars.filter_simulated or global_vars.filter_real_data):
+    if (global_vars.FILTER_SIMULATED or global_vars.FILTER_REAL_DATA):
         print("FILTERING SINGLETONS")
 
     # generator
