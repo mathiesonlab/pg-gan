@@ -150,8 +150,9 @@ python3 summary_stats.py chb_exp.out chb_exp.png
 ### Aside: Testing/customization in Summary Stats
 By default, `summary_stats` will use the same arguments used in the input file, but command line arguments can be used to override the original settings if desired -- usually for testing purposes.
 `python3 summary_stats.py chb_const.out chb_const.png -b alternate_mask.bed`
-Additionally, in some situations (usually testing), it may be desirable to not read from an input file at all, and instead use a static set of arguments and parameters. This can be arranged with the file `global_vars.py`, `section B: overwriting in-file data`. Set the variable `overwrite_trial_data = True`, and then adjust the dictionary `trial_data` as needed.
+Additionally, in some situations (usually testing), it may be desirable to not read from an input file at all, and instead use a static set of arguments and parameters. This can be arranged with the file `global_vars.py`, `section B: overwriting in-file data`. Set the variable `OVERWRITE_TRIAL_DATA = True`, and then adjust the dictionary `TRIAL_DATA` as needed.
 ~~~
+# section B: overwriting in-file data-------------------------------------------
 OVERWRITE_TRIAL_DATA = True
 TRIAL_DATA = { 'model': 'const', 'params': 'Ne', 'data_h5': 'CHB.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.h5',
                'bed_file': '20120824_strict_mask.bed', 'reco_folder': 'genetic_map/', 'param_values': '10000.'}
@@ -161,11 +162,12 @@ The program will ignore the given input file, and instead use the arguments prov
 
 The `global_vars.py` file also allows customization of the population labels and colors used by `summary_stats` in `section C: summary stats customization`. It is recommended to comment out the body of the function `update_ss_labels` (leaving the assert statement at the end of the definition,) then to add your own custom labels and colors at the end of the function definition. Be sure to always use the `extend` or `append` methods to mutate the lists, instead of overwriting the lists (which will silently fail.) For example:
 ~~~
+  ...
   # after commenting out the body of update_ss_labels...
-  ss_labels.extend(["sample_A", "sample_B"])
-  ss_colors.extend(["red", "blue"])
+  SS_LABELS.extend(["sample_A", "sample_B"])
+  SS_COLORS.extend(["red", "blue"])
 
-  assert len(ss_labels) == len(ss_colors) # leave this assert at the end
+  assert len(SS_LABELS) == len(SS_COLORS) # leave this assert at the end
 ~~~
 You can also edit the `COLORS_DICT` variable on at the beginning of section C to contain your population name and its corresponding color.
 
@@ -201,6 +203,7 @@ if opts.model == 'const':
 ### Aside: Further customization
 It is sometimes desirable to use a longer region length, a smaller batch size, a different default sample size, etc. These values and more can be overwritten in the `global_vars.py`, `section A: general`:
 ~~~
+# section A: general -----------------------------------------------------------
 ...
 L = 50000
 BATCH_SIZE = 50
