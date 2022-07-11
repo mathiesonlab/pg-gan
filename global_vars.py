@@ -43,20 +43,16 @@ def update_ss_labels(pop_names):
     assert len(SS_LABELS) == len(SS_COLORS)
 
 # Section D: alternate data format options--------------------------------------
-NEW_DATA = False
+NEW_DATA = False # 1000 Genomes high-coverage data
 
+'''The high-coverage data ("new data") appears to have partial filtering on
+singletons. It is recommended, if using the high-coverage data, to enable
+singleton filtering for both real and simulated data. It may be necessary to
+experiment with different filtering rates.'''
 FILTER_SIMULATED = False
 FILTER_REAL_DATA = False
 FILTER_RATE = 0.50
 NUM_SNPS_ADJ = NUM_SNPS * 3
-
-'''
-Recommended:
-{NEW_DATA: False, FILTER_SIMULATED = False, FILTER_REAL_DATA = False}
-
-If you're using new data, it is recommended to filter singletons:
-{NEW_DATA: True, FILTER_SIMULATED = True, FILTER_REAL_DATA = True}
-'''
 # ------------------------------------------------------------------------------
 if __name__ == "__main__":
     # testing
