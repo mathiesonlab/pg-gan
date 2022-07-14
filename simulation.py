@@ -20,6 +20,7 @@ import sps.species
 import sps.HomSap
 
 # our imports
+import global_vars
 import real_data_random
 import util
 
@@ -29,34 +30,39 @@ import util
 
 class Generator:
 
-    def __init__(self, simulator, param_names, sample_sizes, num_snps, L, seed,\
-        mirror_real=False, reco_folder="", filter=False):
+    def __init__(self, simulator, param_names, sample_sizes, seed,\
+                 mirror_real=False, reco_folder=""):
         self.simulator = simulator
         self.param_names = param_names
         self.sample_sizes = sample_sizes
         self.num_samples = sum(sample_sizes)
-        self.num_snps = num_snps
-        self.L = L
         self.rng = default_rng(seed)
         self.curr_params = None
 
-        # for real data, use HapMap. this also turns on singleton filtering
-        self.prior = []
-        self.weights = []
-        self.filter = filter # for singletons
+        self.pretraining = False
+
+        # for real data, use HapMap
         if mirror_real and reco_folder != None:
-            files = [reco_folder + "genetic_map_GRCh37_chr" + str(i) + ".txt" \
-                for i in range(1,23)]
+            pop = reco_folder[-4: -1]
+
+            if global_vars.NEW_DATA:
+                files = [reco_folder + pop + \
+                  "_recombination_map_hapmap_format_hg38_chr_" + str(i) + \
+                  ".txt" for i in global_vars.CHROM_RANGE]
+            else:
+                files = [reco_folder + "genetic_map_GRCh37_chr" + str(i) + ".txt" \
+                   for i in global_vars.CHROM_RANGE]
+
             self.prior, self.weights = util.parse_hapmap_empirical_prior(files)
+
+        else:
+            self.prior, self.weights = [], []
 
     def simulate_batch(self, batch_size, params=[], real=False, neg1=True):
 
         # initialize 4D matrix (two channels for distances)
-        if self.num_snps == None:
-            regions = []
-        else:
-            regions = np.zeros((batch_size, self.num_samples, self.num_snps, \
-                2), dtype=np.float32) # two channels
+        regions = np.zeros((batch_size, self.num_samples, global_vars.NUM_SNPS, \
+                            2), dtype=np.float32) # two channels
 
         # set up parameters
         sim_params = util.ParamSet()
@@ -71,14 +77,9 @@ class Generator:
         for i in range(batch_size):
             seed = self.rng.integers(1,high=2**32) # like GAN "noise"
 
-            ts = self.simulator(sim_params, self.sample_sizes, self.L, seed, \
+            ts = self.simulator(sim_params, self.sample_sizes, seed, \
                                 self.get_reco(sim_params))
-            region = prep_region(ts, self.num_snps, self.L, self.filter, neg1)
-
-            if self.num_snps == None:
-                regions.append(region)
-            else:
-                regions[i] = region
+            regions[i] = prep_region(ts, neg1)
 
         return regions
 
@@ -95,28 +96,24 @@ class Generator:
             return reco
 
         return draw_background_rate_from_prior(self.prior, self.weights)
-    
+
 def draw_background_rate_from_prior(prior_rates, prob):
     return np.random.choice(prior_rates, p=prob)
 
-def prep_region(ts, num_snps, L, filter, neg1):
+def prep_region(ts, neg1):
     """Gets simulated data ready"""
     gt_matrix = ts.genotype_matrix().astype(float)
     snps_total = gt_matrix.shape[0]
 
     positions = [round(variant.site.position) for variant in ts.variants()]
     assert len(positions) == snps_total
-    dist_vec = [0] + [(positions[j+1] - positions[j])/L for j in \
+    dist_vec = [0] + [(positions[j+1] - positions[j])/global_vars.L for j in \
         range(snps_total-1)]
 
     # when mirroring real data
-    if filter:
-        return util.process_gt_dist(gt_matrix, dist_vec, num_snps, filter=True,\
-            rate=0.3, neg1=neg1)
-    else:
-        return util.process_gt_dist(gt_matrix, dist_vec, num_snps, neg1=neg1)
+    return util.process_gt_dist(gt_matrix, dist_vec, neg1=neg1)
 
-def simulate_im(params, sample_sizes, L, seed, reco):
+def simulate_im(params, sample_sizes, seed, reco):
     """Note this is a 2 population model"""
     assert len(sample_sizes) == 2
 
@@ -161,13 +158,13 @@ def simulate_im(params, sample_sizes, L, seed, reco):
 		population_configurations = population_configurations,
 		demographic_events = demographic_events,
 		mutation_rate = params.mut.value,
-		length = L,
+		length = global_vars.L,
 		recombination_rate = reco,
         random_seed = seed)
 
     return ts
 
-def simulate_ooa2(params, sample_sizes, L, seed, reco):
+def simulate_ooa2(params, sample_sizes,seed, reco):
     """Note this is a 2 population model"""
     assert len(sample_sizes) == 2
 
@@ -209,7 +206,7 @@ def simulate_ooa2(params, sample_sizes, L, seed, reco):
 		population_configurations = population_configurations,
 		demographic_events = demographic_events,
 		mutation_rate = params.mut.value,
-		length = L,
+		length =  global_vars.L,
 		recombination_rate = reco,
         random_seed = seed)
 
@@ -265,13 +262,13 @@ def simulate_postOOA(params, sample_sizes, L, seed, reco):
 		demographic_events = demographic_events,
         #migration_matrix = migration_matrix,
 		mutation_rate = params.mut.value,
-		length = L,
+		length =  global_vars.L,
 		recombination_rate = reco,
         random_seed = seed)
 
     return ts
 
-def simulate_exp(params, sample_sizes, L, seed, reco):
+def simulate_exp(params, sample_sizes, seed, reco):
     """Note this is a 1 population model"""
     assert len(sample_sizes) == 1
 
@@ -292,29 +289,29 @@ def simulate_exp(params, sample_sizes, L, seed, reco):
     ts = msprime.simulate(sample_size = sum(sample_sizes),
 		demographic_events = demographic_events,
 		mutation_rate = params.mut.value,
-		length = L,
+		length =  global_vars.L,
 		recombination_rate = reco,
         random_seed = seed)
 
     return ts
 
-def simulate_const(params, sample_sizes, L, seed, reco):
+def simulate_const(params, sample_sizes, seed, reco):
     assert len(sample_sizes) == 1
 
     # simulate data
     ts = msprime.simulate(sample_size=sum(sample_sizes), Ne=params.Ne.value, \
-        length=L, mutation_rate=params.mut.value, recombination_rate=reco, \
+        length=global_vars.L, mutation_rate=params.mut.value, recombination_rate=reco, \
         random_seed = seed)
 
     return ts
 
-def simulate_ooa3(params, sample_sizes, L, seed, reco):
+def simulate_ooa3(params, sample_sizes, seed, reco):
     """From OOA3 as implemented in stdpopsim"""
     assert len(sample_sizes) == 3
 
     sp = sps.species.get_species("HomSap")
 
-    mult = L/141213431 # chr9
+    mult = global_vars.L/141213431 # chr9
     contig = sp.get_contig("chr9",length_multiplier=mult) # TODO vary the chrom
 
     # 14 params

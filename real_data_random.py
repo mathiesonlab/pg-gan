@@ -14,11 +14,8 @@ import sys
 import datetime
 
 # our imports
+import global_vars
 import util
-
-# globals
-FRAC_CALLABLE = 0.5
-L = 50000
 
 class Region:
 
@@ -32,7 +29,10 @@ class Region:
         s = str(self.chrom) + ":" + str(self.start_pos) + "-" +str(self.end_pos)
         return s
 
-    def inside_mask(self, mask_dict):
+    def inside_mask(self, mask_dict, frac_callable = 0.5):
+        if mask_dict is None:
+            return True
+
         mask_lst = mask_dict[self.chrom] # restrict to this chrom
         region_start_idx, start_inside = binary_search(self.start_pos, mask_lst)
         region_end_idx, end_inside = binary_search(self.end_pos, mask_lst)
@@ -47,7 +47,7 @@ class Region:
                 part_inside = mask_lst[region_start_idx][1] - self.start_pos
             else:
                 part_inside = self.end_pos - mask_lst[region_start_idx][0]
-            return part_inside/self.region_len >= FRAC_CALLABLE
+            return part_inside/self.region_len >= frac_callable
 
         # different region index
         part_inside = 0
@@ -75,7 +75,7 @@ class Region:
             part_inside += (mask_lst[region_end_idx][1] - \
                 mask_lst[region_end_idx][0])
 
-        return part_inside/self.region_len >= FRAC_CALLABLE
+        return part_inside/self.region_len >= frac_callable
 
 def read_mask(filename):
     """Read from bed file"""
@@ -117,14 +117,12 @@ def binary_search(q, lst):
 
 class RealDataRandomIterator:
 
-    def __init__(self, S, filename, bed_file, frac_test=None, \
-        chrom_starts=False):
+    def __init__(self, filename, bed_file=None, chrom_starts=False):
         callset = h5py.File(filename, mode='r')
         print(list(callset.keys()))
         # output: ['GT'] ['CHROM', 'POS']
         print(list(callset['calldata'].keys()),list(callset['variants'].keys()))
 
-        self.S = S
         raw = callset['calldata/GT']
         print("raw", raw.shape)
         newshape = (raw.shape[0], -1)
@@ -141,7 +139,9 @@ class RealDataRandomIterator:
         print(self.chrom_all.chunks)'''
         self.num_snps = len(self.pos_all) # total for all chroms
 
-        self.mask_dict = read_mask(bed_file) # mask
+        # mask
+        self.mask_dict = read_mask(bed_file) \
+                         if bed_file is not None else None
 
         # useful for fastsimcoal and msmc
         if chrom_starts:
@@ -160,7 +160,8 @@ class RealDataRandomIterator:
         while ln < region_len:
 
             if len(self.pos_all) <= i+1:
-                print("not enough on chrom", chr)
+                chr_str = chr.decode("utf-8") if isinstance(chr, bytes) else chr
+                print("not enough on chrom", chr_str)
                 return -1 # not enough on last chrom
 
             next_pos = self.pos_all[i+1]
@@ -168,7 +169,8 @@ class RealDataRandomIterator:
                 diff = next_pos - curr_pos
                 ln += diff
             else:
-                print("not enough on chrom", chr)
+                chr_str = chr.decode("utf-8") if isinstance(chr, bytes) else chr
+                print("not enough on chrom", chr_str)
                 return -1 # not enough on this chrom
             i += 1
             curr_pos = next_pos
@@ -176,35 +178,42 @@ class RealDataRandomIterator:
         return i # exclusive
 
     def real_region(self, neg1, region_len):
-        start_idx = random.randrange(self.num_snps-self.S) # inclusive
+        start_idx = random.randrange(self.num_snps - global_vars.NUM_SNPS) # inclusive
 
         # go by region len or by SNPs
-        if region_len:
-            end_idx = self.find_end(start_idx, L)
-            if end_idx == -1:
-                return self.real_region(neg1, region_len) # try again
-        else:
-            end_idx = start_idx + self.S # exclusive
+        end_idx_len = self.find_end(start_idx, global_vars.L)
 
-        hap_data = self.haps_all[start_idx:end_idx, :]
-        start_base = self.pos_all[start_idx]
-        end_base = self.pos_all[end_idx]
-        positions = self.pos_all[start_idx:end_idx]
+        if end_idx_len == -1:
+            return self.real_region(neg1, region_len) # try again
+
+        if region_len:
+            end_idx_S = end_idx_len
+        else:
+            end_idx_S = start_idx + global_vars.NUM_SNPS # exclusive
 
         # make sure we don't span two chroms
         start_chrom = self.chrom_all[start_idx]
-        end_chrom = self.chrom_all[end_idx-1] # inclusive here
+        end_chrom = self.chrom_all[end_idx_S-1] # inclusive here
+
         if start_chrom != end_chrom:
             #print("bad chrom", start_chrom, end_chrom)
             return self.real_region(neg1, region_len) # try again
 
-        region = Region(int(start_chrom), start_base, end_base)
+        hap_data = self.haps_all[start_idx:end_idx_S, :]
+        start_base = self.pos_all[start_idx]
+        end_base = self.pos_all[end_idx_S]
+        end_base_len = self.pos_all[end_idx_len]
+        positions_len = self.pos_all[start_idx:end_idx_len]
+        positions_S = self.pos_all[start_idx:end_idx_S] # different if !region_len
+
+        chrom_num = int(start_chrom[3:]) if global_vars.NEW_DATA else int(start_chrom)
+        region = Region(chrom_num, start_base, end_base)
         result = region.inside_mask(self.mask_dict)
 
         # if we do have an accessible region
         if result:
-            dist_vec = [0] + [(positions[j+1] - positions[j])/L for j in \
-                range(len(positions)-1)]
+            dist_vec = [0] + [(positions_S[j+1] - positions_S[j])/global_vars.L for j in \
+                range(len(positions_S)-1)]
 
             after = util.process_gt_dist(hap_data, dist_vec, len(dist_vec), \
                 neg1=neg1)
@@ -217,7 +226,7 @@ class RealDataRandomIterator:
         """Use region_len=True for fixed region length, not by SNPs"""
 
         if not region_len:
-            regions = np.zeros((batch_size, self.num_samples, self.S, 2), \
+            regions = np.zeros((batch_size, self.num_samples, global_vars.NUM_SNPS, 2), \
                 dtype=np.float32)
 
             for i in range(batch_size):
@@ -257,7 +266,7 @@ if __name__ == "__main__":
     # test file
     filename = sys.argv[1]
     bed_file = sys.argv[2]
-    iterator = RealDataRandomIterator(S, filename, bed_file)
+    iterator = RealDataRandomIterator(filename, bed_file)
 
     start_time = datetime.datetime.now()
     for i in range(100):
@@ -269,5 +278,5 @@ if __name__ == "__main__":
 
     # test find_end
     for i in range(10):
-        start_idx = random.randrange(iterator.num_snps-iterator.S)
+        start_idx = random.randrange(iterator.num_snps-global_vars.NUM_SNPS)
         iterator.find_end(start_idx, L)

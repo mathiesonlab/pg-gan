@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+import global_vars
+
 # GLOBALS
 NUM_SFS = 10
 NUM_LD  = 15
@@ -34,6 +36,12 @@ def add_to_lst(total_lst, mini_lst):
 
 def parse_output(filename, return_acc=False):
     """Parse pg-gan output to find the inferred parameters"""
+
+    def clean_param_tkn(str):
+        if str == 'None,':
+            return None # this is a common result (not an edge case)
+        return str[1:-2]
+
     f = open(filename,'r')
 
     # list of lists, one for each param
@@ -46,6 +54,8 @@ def parse_output(filename, return_acc=False):
 
     num_param = None
 
+    trial_data = {}
+    
     for line in f:
 
         if line.startswith("{"):
@@ -58,6 +68,12 @@ def parse_output(filename, return_acc=False):
             for i in range(num_param):
                 param_lst_all.append([])
 
+            trial_data['model'] = clean_param_tkn(tokens[1])
+            trial_data['params'] = param_str
+            trial_data['data_h5'] = clean_param_tkn(tokens[5])
+            trial_data['bed_file'] = clean_param_tkn(tokens[7])
+            trial_data['reco_folder'] = clean_param_tkn(tokens[9])
+                
         elif "Epoch 100" in line:
             tokens = line.split()
             disc_loss = float(tokens[3][:-1])
@@ -78,9 +94,9 @@ def parse_output(filename, return_acc=False):
     # Use -1 instead of iter for the last iteration
     final_params = [param_lst_all[i][-1] for i in range(num_param)]
     if return_acc:
-        return final_params, disc_loss_lst, real_acc_lst, fake_acc_lst
+        return final_params, disc_loss_lst, real_acc_lst, fake_acc_lst, trial_data
     else:
-        return final_params
+        return final_params, trial_data
 
 ################################################################################
 # COMPUTE STATS
@@ -286,7 +302,7 @@ def plot_fst(ax, real_fst, sim_fst, real_label, sim_label, real_color, \
 # COLLECT STATISTICS
 ################################################################################
 
-def stats_all(matrices, matrices_region, L):
+def stats_all(matrices, matrices_region):
     """Set up and compute stats"""
 
     # sfs
@@ -330,10 +346,10 @@ def stats_all(matrices, matrices_region, L):
             pop_sfs[s].append(sfs[s])
 
         # inter-snp
-        pop_dist.extend([x*L for x in intersnp])
+        pop_dist.extend([x*global_vars.L for x in intersnp])
 
         # LD
-        ld = compute_ld(vm, L)
+        ld = compute_ld(vm, global_vars.L)
         for l in range(len(ld)):
             pop_ld[l].append(ld[l])
 
