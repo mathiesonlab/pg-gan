@@ -29,7 +29,7 @@ NAMES = ["Tajima's D", r'pairwise heterozygosity ($\pi$)', \
 # for ooa2 (YRI/CEU)
 FSC_PARAMS = [21017, 0.0341901, 3105.5, 21954, 33077.5, 2844, 1042]
 
-def main():
+def main():   
     input_file = sys.argv[1]
     output_file = sys.argv[2]
     print("input file", input_file)
@@ -45,7 +45,7 @@ def main():
 
     opts, param_values = util.parse_args(in_file_data = in_file_data, param_values = param_values)
 
-    generator, _, iterator, parameters = util.process_opts(opts, summary_stats = True)
+    generator, iterator, parameters, _ = util.process_opts(opts, summary_stats = True)
 
     pop_names = opts.data_h5.split("/")[-1].split(".")[0] \
                        if opts.data_h5 is not None else ""
@@ -66,14 +66,14 @@ def main():
         fsc=True
 
     # real
-    real_matrices = iterator.real_batch(NUM_TRIAL, neg1=False)
-    real_matrices_region = iterator.real_batch(NUM_TRIAL, neg1=False,
+    real_matrices = iterator.real_batch(batch_size=NUM_TRIAL, neg1=False)
+    real_matrices_region = iterator.real_batch(batch_size=NUM_TRIAL, neg1=False,
         region_len=True)
     print("got through real data")
 
     # sim
-    sim_matrices = generator.simulate_batch(NUM_TRIAL, neg1=False)
-    sim_matrices_region = generator.simulate_batch(NUM_TRIAL, neg1=False)
+    sim_matrices = generator.simulate_batch(batch_size=NUM_TRIAL, neg1=False)
+    sim_matrices_region = generator.simulate_batch(batch_size=NUM_TRIAL, neg1=False)
 
     # one pop models
     if opts.model in ['exp', 'const']:

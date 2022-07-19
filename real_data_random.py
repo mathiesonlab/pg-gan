@@ -149,7 +149,7 @@ class RealDataRandomIterator:
             for x in list(self.chrom_all):
                 self.chrom_counts[int(x)] += 1
 
-    def find_end(self, start_idx, region_len):
+    def find_end(self, start_idx):
         """
         Based on the given start_idx and the region_len, find the end index
         """
@@ -157,7 +157,7 @@ class RealDataRandomIterator:
         chr = self.chrom_all[start_idx]
         i = start_idx
         curr_pos = self.pos_all[start_idx]
-        while ln < region_len:
+        while ln < global_vars.L:
 
             if len(self.pos_all) <= i+1:
                 chr_str = chr.decode("utf-8") if isinstance(chr, bytes) else chr
@@ -181,7 +181,7 @@ class RealDataRandomIterator:
         start_idx = random.randrange(self.num_snps - global_vars.NUM_SNPS) # inclusive
 
         # go by region len or by SNPs
-        end_idx_len = self.find_end(start_idx, global_vars.L)
+        end_idx_len = self.find_end(start_idx)
 
         if end_idx_len == -1:
             return self.real_region(neg1, region_len) # try again
@@ -222,9 +222,9 @@ class RealDataRandomIterator:
         # try again if not in accessible region
         return self.real_region(neg1, region_len)
 
-    def real_batch(self, batch_size, neg1=True, region_len=False):
+    def real_batch(self, batch_size = global_vars.BATCH_SIZE, neg1=True, region_len=False):
         """Use region_len=True for fixed region length, not by SNPs"""
-
+        
         if not region_len:
             regions = np.zeros((batch_size, self.num_samples, global_vars.NUM_SNPS, 2), \
                 dtype=np.float32)
@@ -260,8 +260,6 @@ class RealDataRandomIterator:
 
 if __name__ == "__main__":
     # testing
-    S = 36
-    L = 50000
 
     # test file
     filename = sys.argv[1]
@@ -279,4 +277,4 @@ if __name__ == "__main__":
     # test find_end
     for i in range(10):
         start_idx = random.randrange(iterator.num_snps-global_vars.NUM_SNPS)
-        iterator.find_end(start_idx, L)
+        iterator.find_end(start_idx)

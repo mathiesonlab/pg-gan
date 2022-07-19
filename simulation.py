@@ -58,7 +58,7 @@ class Generator:
         else:
             self.prior, self.weights = [], []
 
-    def simulate_batch(self, batch_size, params=[], real=False, neg1=True):
+    def simulate_batch(self, batch_size=global_vars.BATCH_SIZE, params=[], real=False, neg1=True):
 
         # initialize 4D matrix (two channels for distances)
         regions = np.zeros((batch_size, self.num_samples, global_vars.NUM_SNPS, \
@@ -83,8 +83,8 @@ class Generator:
 
         return regions
 
-    def real_batch(self, batch_size, is_train): # ignore is_train
-        return self.simulate_batch(batch_size, real=True)
+    def real_batch(self, batch_size = global_vars.BATCH_SIZE, neg1=True, region_len=False):
+        return self.simulate_batch(batch_size=batch_size, real=True)
 
     def update_params(self, new_params):
         self.curr_params = new_params
@@ -212,7 +212,7 @@ def simulate_ooa2(params, sample_sizes,seed, reco):
 
     return ts
 
-def simulate_postOOA(params, sample_sizes, L, seed, reco):
+def simulate_postOOA(params, sample_sizes, seed, reco):
     """Note this is a 2 population model for CEU/CHB split"""
     assert len(sample_sizes) == 2
 
@@ -343,14 +343,12 @@ def simulate_ooa3(params, sample_sizes, seed, reco):
 if __name__ == "__main__":
 
     batch_size = 50
-    S = 36
-    R = 50000
-    SEED = 1833
     params = util.ParamSet()
 
     # quick test
     print("sim exp")
-    generator = Generator(simulate_exp, ["N1", "T1"], [20], S, R, SEED)
+    generator = Generator(simulate_exp, ["N1", "T1"], [20],
+                          global_vars.DEFAULT_SEED)
     generator.update_params([params.N1.value, params.T1.value])
-    mini_batch = generator.simulate_batch(50)
+    mini_batch = generator.simulate_batch()
     print("x", mini_batch.shape)

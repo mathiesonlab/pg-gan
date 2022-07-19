@@ -14,6 +14,7 @@ import tensorflow as tf
 import scipy.stats
 
 # our imports
+import discriminators
 import global_vars
 import util
 
@@ -46,8 +47,9 @@ def main():
         random.seed(opts.seed)
         tf.random.set_seed(opts.seed)
 
-    generator, discriminator, iterator, parameters = util.process_opts(opts)
-
+    generator, iterator, parameters, num_pops = util.process_opts(opts)
+    discriminator = get_discriminator(num_pops)
+    
     # grid search
     if opts.grid:
         print("Grid search not supported right now")
@@ -114,7 +116,7 @@ def simulated_annealing(generator, discriminator, iterator, parameters, seed, \
                 s_proposal = [v for v in s_current] # copy
                 s_proposal[k] = parameters[k].proposal(s_current[k], T)
                 loss_proposal = pg_gan.generator_loss(s_proposal)
-
+              
                 print(j, "proposal", s_proposal, loss_proposal)
                 if loss_proposal < loss_best: # minimizing loss
                     loss_best = loss_proposal
@@ -134,7 +136,7 @@ def simulated_annealing(generator, discriminator, iterator, parameters, seed, \
             s_current = s_best
             generator.update_params(s_current)
             # train only if accept
-            real_acc, fake_acc = pg_gan.train_sa(NUM_BATCH, global_vars.BATCH_SIZE)
+            real_acc, fake_acc = pg_gan.train_sa(NUM_BATCH)
             loss_curr = loss_best
 
         # don't retrain
@@ -216,7 +218,7 @@ class PG_GAN:
             s_trial = [param.start() for param in self.parameters]
             print("trial", k+1, s_trial)
             self.generator.update_params(s_trial)
-            real_acc, fake_acc = self.train_sa(num_batches, global_vars.BATCH_SIZE)
+            real_acc, fake_acc = self.train_sa(num_batches)
             avg_acc = (real_acc + fake_acc)/2
             if avg_acc > max_acc:
                 max_acc = avg_acc
@@ -227,12 +229,12 @@ class PG_GAN:
         self.generator.update_params(s_best)
         return s_best
 
-    def train_sa(self, num_batches, batch_size):
+    def train_sa(self, num_batches):
         """Train using fake_values for the simulated data"""
 
         for epoch in range(num_batches):
 
-            real_regions = self.iterator.real_batch(batch_size, neg1 = True)
+            real_regions = self.iterator.real_batch(neg1 = True)
             real_acc, fake_acc, disc_loss = self.train_step(real_regions)
 
             if (epoch+1) % 100 == 0:
@@ -246,11 +248,11 @@ class PG_GAN:
 
     def generator_loss(self, proposed_params):
         """ Generator loss """
-        generated_regions = self.generator.simulate_batch(global_vars.BATCH_SIZE, \
-            params=proposed_params)
+        generated_regions = self.generator.simulate_batch(params=proposed_params)
         # not training when we use the discriminator here
         fake_output = self.discriminator(generated_regions, training=False)
         loss = self.cross_entropy(tf.ones_like(fake_output), fake_output)
+
         return loss.numpy()
 
     def discriminator_loss(self, real_output, fake_output):
@@ -276,7 +278,7 @@ class PG_GAN:
 
         with tf.GradientTape() as disc_tape:
             # use current params
-            generated_regions = self.generator.simulate_batch(global_vars.BATCH_SIZE)
+            generated_regions = self.generator.simulate_batch()
 
             real_output = self.discriminator(real_regions, training=True)
             fake_output = self.discriminator(generated_regions, training=True)
@@ -291,6 +293,17 @@ class PG_GAN:
             self.discriminator.trainable_variables))
 
         return real_acc, fake_acc, disc_loss
+
+################################################################################
+# EXTRA UTILITIES
+################################################################################
+def get_discriminator(num_pops):
+    if num_pops == 1:
+        return discriminators.OnePopModel()
+    if num_pops == 2:
+        return discriminators.TwoPopModel()
+    # else
+    return discriminators.ThreePopModel()
 
 if __name__ == "__main__":
     main()
