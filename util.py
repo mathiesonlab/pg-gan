@@ -447,25 +447,21 @@ def process_opts(opts, summary_stats = False):
     # parse model and simulator
     if opts.model == 'const':
         num_pops = 1
-        sample_sizes = get_sample_sizes(num_pops)
         simulator = simulation.simulate_const
 
     # exp growth
     elif opts.model == 'exp':
         num_pops = 1
-        sample_sizes = get_sample_sizes(num_pops)
         simulator = simulation.simulate_exp
 
     # isolation-with-migration model (2 populations)
     elif opts.model == 'im':
         num_pops = 2
-        sample_sizes = get_sample_sizes(num_pops)
         simulator = simulation.simulate_im
 
     # out-of-Africa model (2 populations)
     elif opts.model in ['ooa2', 'fsc']:
         num_pops = 2
-        sample_sizes = get_sample_sizes(num_pops)
         simulator = simulation.simulate_ooa2
 
     # MSMC
@@ -477,13 +473,11 @@ def process_opts(opts, summary_stats = False):
     # CEU/CHB (2 populations)
     elif opts.model == 'post_ooa':
         num_pops = 2
-        sample_sizes = get_sample_sizes(num_pops)
         simulator = simulation.simulate_postOOA
 
     # out-of-Africa model (3 populations)
     elif opts.model == 'ooa3':
         num_pops = 3
-        sample_sizes = get_sample_sizes(num_pops)
         simulator = simulation.simulate_ooa3
 
     # no other options
@@ -494,6 +488,7 @@ def process_opts(opts, summary_stats = False):
         print("FILTERING SINGLETONS")
 
     # generator
+    sample_sizes = get_sample_sizes(num_pops)
     generator = simulation.Generator(simulator, param_names, sample_sizes,\
                                      opts.seed, mirror_real=real, \
                                       reco_folder=opts.reco_folder)
@@ -503,7 +498,7 @@ def process_opts(opts, summary_stats = False):
         iterator = simulation.Generator(simulator, param_names, sample_sizes, \
                                         opts.seed) # don't need reco_folder
 
-    return generator, iterator, parameters, num_pops
+    return generator, iterator, parameters, sample_sizes
 
 if __name__ == "__main__":
     # test major/minor and post-processing

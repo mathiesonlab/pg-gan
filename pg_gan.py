@@ -47,9 +47,9 @@ def main():
         random.seed(opts.seed)
         tf.random.set_seed(opts.seed)
 
-    generator, iterator, parameters, num_pops = util.process_opts(opts)
-    discriminator = get_discriminator(num_pops)
-    
+    generator, iterator, parameters, sample_sizes = util.process_opts(opts)
+    discriminator = get_discriminator(sample_sizes)
+
     # grid search
     if opts.grid:
         print("Grid search not supported right now")
@@ -116,7 +116,7 @@ def simulated_annealing(generator, discriminator, iterator, parameters, seed, \
                 s_proposal = [v for v in s_current] # copy
                 s_proposal[k] = parameters[k].proposal(s_current[k], T)
                 loss_proposal = pg_gan.generator_loss(s_proposal)
-              
+
                 print(j, "proposal", s_proposal, loss_proposal)
                 if loss_proposal < loss_best: # minimizing loss
                     loss_best = loss_proposal
@@ -297,13 +297,16 @@ class PG_GAN:
 ################################################################################
 # EXTRA UTILITIES
 ################################################################################
-def get_discriminator(num_pops):
+
+def get_discriminator(sample_sizes):
+    num_pops = len(sample_sizes)
     if num_pops == 1:
         return discriminators.OnePopModel()
     if num_pops == 2:
-        return discriminators.TwoPopModel()
+        return discriminators.TwoPopModel(sample_sizes[0], sample_sizes[1])
     # else
-    return discriminators.ThreePopModel()
+    return discriminators.ThreePopModel(sample_sizes[0], sample_sizes[1], \
+        sample_sizes[2])
 
 if __name__ == "__main__":
     main()
