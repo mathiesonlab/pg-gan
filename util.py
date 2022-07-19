@@ -10,7 +10,6 @@ import sys
 
 from scipy.stats import norm
 
-import discriminators
 import global_vars
 import real_data_random
 import simulation
@@ -447,28 +446,26 @@ def process_opts(opts, summary_stats = False):
 
     # parse model and simulator
     if opts.model == 'const':
-        sample_sizes = get_sample_sizes(num_pops = 1)
-        discriminator = discriminators.OnePopModel() if not summary_stats else None
+        num_pops = 1
+        sample_sizes = get_sample_sizes(num_pops)
         simulator = simulation.simulate_const
 
     # exp growth
     elif opts.model == 'exp':
-        sample_sizes = get_sample_sizes(num_pops = 1)
-        discriminator = discriminators.OnePopModel() if not summary_stats else None
+        num_pops = 1
+        sample_sizes = get_sample_sizes(num_pops)
         simulator = simulation.simulate_exp
 
     # isolation-with-migration model (2 populations)
     elif opts.model == 'im':
-        sample_sizes = get_sample_sizes(num_pops = 2)
-        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
-                        sample_sizes[1])  if not summary_stats else None
+        num_pops = 2
+        sample_sizes = get_sample_sizes(num_pops)
         simulator = simulation.simulate_im
 
     # out-of-Africa model (2 populations)
     elif opts.model in ['ooa2', 'fsc']:
-        sample_sizes = get_sample_sizes(num_pops = 2)
-        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
-                        sample_sizes[1]) if not summary_stats else None
+        num_pops = 2
+        sample_sizes = get_sample_sizes(num_pops)
         simulator = simulation.simulate_ooa2
 
     # MSMC
@@ -479,16 +476,14 @@ def process_opts(opts, summary_stats = False):
 
     # CEU/CHB (2 populations)
     elif opts.model == 'post_ooa':
-        sample_sizes = get_sample_sizes(num_pops = 2)
-        discriminator = discriminators.TwoPopModel(sample_sizes[0], \
-                        sample_sizes[1]) if not summary_stats else None
+        num_pops = 2
+        sample_sizes = get_sample_sizes(num_pops)
         simulator = simulation.simulate_postOOA
 
     # out-of-Africa model (3 populations)
     elif opts.model == 'ooa3':
-        sample_sizes = get_sample_sizes(num_pops = 3)
-        discriminator = discriminators.ThreePopModel(sample_sizes[0], \
-                        sample_sizes[1], sample_sizes[2]) if not summary_stats else None
+        num_pops = 3
+        sample_sizes = get_sample_sizes(num_pops)
         simulator = simulation.simulate_ooa3
 
     # no other options
@@ -508,10 +503,12 @@ def process_opts(opts, summary_stats = False):
         iterator = simulation.Generator(simulator, param_names, sample_sizes, \
                                         opts.seed) # don't need reco_folder
 
-    return generator, discriminator, iterator, parameters
+    return generator, iterator, parameters, num_pops
 
 if __name__ == "__main__":
     # test major/minor and post-processing
+    global_vars.NUM_SNPS = 4 # make smaller for testing
+
     a = np.zeros((6,3))
     a[0,0] = 1
     a[1,0] = 1
@@ -526,4 +523,4 @@ if __name__ == "__main__":
     print(a)
     print(major_minor(a, neg1=True))
 
-    process_gt_dist(a, dist_vec, 4, real=False, rate=0.3)
+    process_gt_dist(a, dist_vec, real=False)
