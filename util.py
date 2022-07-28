@@ -200,7 +200,7 @@ def filter_func(x, rate): # currently not used
         return True
     return np.random.random() >= rate # keep (1-rate) of singletons
 
-def process_gt_dist(gt_matrix, dist_vec, real=False, neg1=True):
+def process_gt_dist(gt_matrix, dist_vec, region_len=False, real=False, neg1=True):
     """
     Take in a genotype matrix and vector of inter-SNP distances. Return a 3D
     numpy array of the given n (haps) and S (SNPs) and 2 channels.
@@ -225,12 +225,14 @@ def process_gt_dist(gt_matrix, dist_vec, real=False, neg1=True):
         print("gt", num_SNPs, "dist", len(dist_vec))
     assert num_SNPs == len(dist_vec)
 
+    S = num_SNPs if region_len else global_vars.NUM_SNPS # used for trimming (don't trim if region len)
+    
     # set up region
-    region = np.zeros((n, global_vars.NUM_SNPS, 2), dtype=np.float32)
+    region = np.zeros((n, S, 2), dtype=np.float32)
 
     mid = num_SNPs//2
-    half_S = global_vars.NUM_SNPS//2
-    if global_vars.NUM_SNPS % 2 == 1: # odd
+    half_S = S//2
+    if S % 2 == 1: # odd
         other_half_S = half_S+1
     else:
         other_half_S = half_S
@@ -247,7 +249,7 @@ def process_gt_dist(gt_matrix, dist_vec, real=False, neg1=True):
     # not enough SNPs, need to center-pad
     else:
         print("NOT ENOUGH SNPS", num_SNPs)
-        print(num_SNPs, global_vars.NUM_SNPS, mid, half_S)
+        print(num_SNPs, S, mid, half_S)
         minor = major_minor(gt_matrix.transpose(), neg1)
         region[:,half_S-mid:half_S-mid+num_SNPs,0] = minor
         distances = np.vstack([np.copy(dist_vec) for k in range(n)])

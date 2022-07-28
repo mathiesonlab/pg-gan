@@ -58,10 +58,13 @@ class Generator:
         else:
             self.prior, self.weights = [], []
 
-    def simulate_batch(self, batch_size=global_vars.BATCH_SIZE, params=[], real=False, neg1=True):
+    def simulate_batch(self, batch_size=global_vars.BATCH_SIZE, params=[], region_len=False, real=False, neg1=True):
 
         # initialize 4D matrix (two channels for distances)
-        regions = np.zeros((batch_size, self.num_samples, global_vars.NUM_SNPS, \
+        if region_len:
+            regions = []
+        else:
+            regions = np.zeros((batch_size, self.num_samples, global_vars.NUM_SNPS, \
                             2), dtype=np.float32) # two channels
 
         # set up parameters
@@ -79,12 +82,17 @@ class Generator:
 
             ts = self.simulator(sim_params, self.sample_sizes, seed, \
                                 self.get_reco(sim_params))
-            regions[i] = prep_region(ts, neg1)
+            region = prep_region(ts, neg1, region_len=region_len)
 
+            if region_len:
+                regions.append(region)
+            else:
+                regions[i] = region
+            
         return regions
 
     def real_batch(self, batch_size = global_vars.BATCH_SIZE, neg1=True, region_len=False):
-        return self.simulate_batch(batch_size=batch_size, real=True)
+        return self.simulate_batch(batch_size=batch_size, real=True, region_len=region_len)
 
     def update_params(self, new_params):
         self.curr_params = new_params
@@ -100,7 +108,7 @@ class Generator:
 def draw_background_rate_from_prior(prior_rates, prob):
     return np.random.choice(prior_rates, p=prob)
 
-def prep_region(ts, neg1):
+def prep_region(ts, neg1, region_len):
     """Gets simulated data ready"""
     gt_matrix = ts.genotype_matrix().astype(float)
     snps_total = gt_matrix.shape[0]
@@ -111,7 +119,7 @@ def prep_region(ts, neg1):
         range(snps_total-1)]
 
     # when mirroring real data
-    return util.process_gt_dist(gt_matrix, dist_vec, neg1=neg1)
+    return util.process_gt_dist(gt_matrix, dist_vec, region_len=region_len, neg1=neg1)
 
 def simulate_im(params, sample_sizes, seed, reco):
     """Note this is a 2 population model"""
