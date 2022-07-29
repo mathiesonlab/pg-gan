@@ -65,6 +65,13 @@ def main():
         generator.update_params(FSC_PARAMS) # make sure to check the order!
         fsc=True
 
+    '''
+    NOTE: both neg1=False and region_len=True (for the second calls) 
+    are very important for summary stats.
+    When editing the pg-gan application, be sure to preserve these settings
+    and functionality.
+    '''
+        
     # real
     real_matrices = iterator.real_batch(batch_size=NUM_TRIAL, neg1=False)
     real_matrices_region = iterator.real_batch(batch_size=NUM_TRIAL, neg1=False,

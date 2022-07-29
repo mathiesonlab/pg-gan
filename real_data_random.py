@@ -212,11 +212,12 @@ class RealDataRandomIterator:
 
         # if we do have an accessible region
         if result:
+            # remember, if region_len, then positions_S is actually positions_len
             dist_vec = [0] + [(positions_S[j+1] - positions_S[j])/global_vars.L for j in \
                 range(len(positions_S)-1)]
 
-            after = util.process_gt_dist(hap_data, dist_vec, len(dist_vec), \
-                neg1=neg1)
+            after = util.process_gt_dist(hap_data, dist_vec, region_len=region_len, \
+                                         real=True, neg1=neg1)
             return after
 
         # try again if not in accessible region
