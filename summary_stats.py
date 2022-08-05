@@ -6,8 +6,6 @@ Date: 2/6/21
 """
 
 # python imports
-import allel
-import libsequence
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +15,6 @@ import sys
 
 # our imports
 import global_vars
-# import simulate_py_from_MSMC_IM
 import ss_helpers
 import util
 
@@ -29,7 +26,7 @@ NAMES = ["Tajima's D", r'pairwise heterozygosity ($\pi$)', \
 # for ooa2 (YRI/CEU)
 FSC_PARAMS = [21017, 0.0341901, 3105.5, 21954, 33077.5, 2844, 1042]
 
-def main():   
+def main():
     input_file = sys.argv[1]
     output_file = sys.argv[2]
     print("input file", input_file)
@@ -66,12 +63,10 @@ def main():
         fsc=True
 
     '''
-    NOTE: both neg1=False and region_len=True (for the second calls) 
-    are very important for summary stats.
-    When editing the pg-gan application, be sure to preserve these settings
-    and functionality.
+    NOTE: for summary stats, use neg1=False to keep hap data as 0/1 (not -1/1)
+    NOTE: use region_len=True for Tajima's D (i.e. not all regions have same S)
     '''
-        
+
     # real
     real_matrices = iterator.real_batch(batch_size=NUM_TRIAL, neg1=False)
     real_matrices_region = iterator.real_batch(batch_size=NUM_TRIAL, neg1=False,
@@ -80,7 +75,8 @@ def main():
 
     # sim
     sim_matrices = generator.simulate_batch(batch_size=NUM_TRIAL, neg1=False)
-    sim_matrices_region = generator.simulate_batch(batch_size=NUM_TRIAL, neg1=False)
+    sim_matrices_region = generator.simulate_batch(batch_size=NUM_TRIAL,
+        neg1=False, region_len=True)
 
     # one pop models
     if opts.model in ['exp', 'const']:

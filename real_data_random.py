@@ -62,7 +62,7 @@ class Region:
             # start after closest region, don't add anything
             pass
         else:
-            part_inside += (mask_lst[region_start_idx][1] - \
+            part_inside += (mask_lst[region_start_idx][1] -
                 mask_lst[region_start_idx][0])
 
         # add on last if inside
@@ -72,7 +72,7 @@ class Region:
             # end before closest region, don't add anything
             pass
         else:
-            part_inside += (mask_lst[region_end_idx][1] - \
+            part_inside += (mask_lst[region_end_idx][1] -
                 mask_lst[region_end_idx][0])
 
         return part_inside/self.region_len >= frac_callable
@@ -140,8 +140,7 @@ class RealDataRandomIterator:
         self.num_snps = len(self.pos_all) # total for all chroms
 
         # mask
-        self.mask_dict = read_mask(bed_file) \
-                         if bed_file is not None else None
+        self.mask_dict = read_mask(bed_file) if bed_file is not None else None
 
         # useful for fastsimcoal and msmc
         if chrom_starts:
@@ -178,7 +177,8 @@ class RealDataRandomIterator:
         return i # exclusive
 
     def real_region(self, neg1, region_len):
-        start_idx = random.randrange(self.num_snps - global_vars.NUM_SNPS) # inclusive
+        # inclusive
+        start_idx = random.randrange(self.num_snps - global_vars.NUM_SNPS)
 
         # go by region len or by SNPs
         end_idx_len = self.find_end(start_idx)
@@ -204,31 +204,34 @@ class RealDataRandomIterator:
         end_base = self.pos_all[end_idx_S]
         end_base_len = self.pos_all[end_idx_len]
         positions_len = self.pos_all[start_idx:end_idx_len]
-        positions_S = self.pos_all[start_idx:end_idx_S] # different if !region_len
+        # different if region_len
+        positions_S = self.pos_all[start_idx:end_idx_S]
 
-        chrom_num = int(start_chrom[3:]) if global_vars.NEW_DATA else int(start_chrom)
+        chrom_num = int(start_chrom[3:]) if global_vars.NEW_DATA else \
+            int(start_chrom)
         region = Region(chrom_num, start_base, end_base)
         result = region.inside_mask(self.mask_dict)
 
         # if we do have an accessible region
         if result:
-            # remember, if region_len, then positions_S is actually positions_len
-            dist_vec = [0] + [(positions_S[j+1] - positions_S[j])/global_vars.L for j in \
-                range(len(positions_S)-1)]
+            # if region_len, then positions_S is actually positions_len
+            dist_vec = [0] + [(positions_S[j+1] - positions_S[j])/global_vars.L
+                for j in range(len(positions_S)-1)]
 
-            after = util.process_gt_dist(hap_data, dist_vec, region_len=region_len, \
-                                         real=True, neg1=neg1)
+            after = util.process_gt_dist(hap_data, dist_vec,
+                region_len=region_len, real=True, neg1=neg1)
             return after
 
         # try again if not in accessible region
         return self.real_region(neg1, region_len)
 
-    def real_batch(self, batch_size = global_vars.BATCH_SIZE, neg1=True, region_len=False):
+    def real_batch(self, batch_size = global_vars.BATCH_SIZE, neg1=True,
+        region_len=False):
         """Use region_len=True for fixed region length, not by SNPs"""
-        
+
         if not region_len:
-            regions = np.zeros((batch_size, self.num_samples, global_vars.NUM_SNPS, 2), \
-                dtype=np.float32)
+            regions = np.zeros((batch_size, self.num_samples,
+                global_vars.NUM_SNPS, 2), dtype=np.float32)
 
             for i in range(batch_size):
                 regions[i] = self.real_region(neg1, region_len)

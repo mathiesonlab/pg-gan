@@ -54,11 +54,11 @@ def main():
     if opts.grid:
         print("Grid search not supported right now")
         sys.exit()
-        #posterior, loss_lst = grid_search(discriminator, samples, simulator, \
+        #posterior, loss_lst = grid_search(discriminator, samples, simulator,
         #    iterator, parameters, opts.seed)
     # simulated annealing
     else:
-        posterior, loss_lst = simulated_annealing(generator, discriminator,\
+        posterior, loss_lst = simulated_annealing(generator, discriminator,
             iterator, parameters, opts.seed, toy=opts.toy)
 
     print(posterior)
@@ -68,7 +68,7 @@ def main():
 # SIMULATED ANNEALING
 ################################################################################
 
-def simulated_annealing(generator, discriminator, iterator, parameters, seed, \
+def simulated_annealing(generator, discriminator, iterator, parameters, seed,
     toy=False):
     """Main function that drives GAN updates"""
 
@@ -111,7 +111,7 @@ def simulated_annealing(generator, discriminator, iterator, parameters, seed, \
             for j in range(10): # trying 10
 
                 # can update all the parameters at once, or choose one at a time
-                #s_proposal = [parameters[k].proposal(s_current[k], T) for k in\
+                #s_proposal = [parameters[k].proposal(s_current[k], T) for k in
                 #    range(len(parameters))]
                 s_proposal = [v for v in s_current] # copy
                 s_proposal[k] = parameters[k].proposal(s_current[k], T)
@@ -156,8 +156,8 @@ def temperature(i, num_iter):
 
 # not used right now
 """
-def grid_search(model_type, samples, demo_file, simulator, iterator, \
-        parameters, is_range, seed):
+def grid_search(model_type, samples, demo_file, simulator, iterator, parameters,
+    is_range, seed):
 
     # can only do one param right now
     assert len(parameters) == 1
@@ -167,7 +167,7 @@ def grid_search(model_type, samples, demo_file, simulator, iterator, \
     all_likelihood = []
     for fake_value in np.linspace(param.min, param.max, num=30):
         fake_params = [fake_value]
-        model = TrainingModel(model_type, samples, demo_file, simulator, \
+        model = TrainingModel(model_type, samples, demo_file, simulator,
             iterator, parameters, is_range, seed)
 
         # train more for grid search
@@ -190,8 +190,6 @@ class PG_GAN:
 
     def __init__(self, generator, discriminator, iterator, parameters, seed):
         """Setup the model and training framework"""
-        print("parameters", type(parameters), parameters)
-
 
         # set up generator and discriminator
         self.generator = generator
@@ -200,8 +198,8 @@ class PG_GAN:
         self.parameters = parameters
 
         # this checks and prints the model (1 is for the batch size)
-        self.discriminator.build_graph((1, iterator.num_samples, global_vars.NUM_SNPS, \
-            NUM_CHANNELS))
+        self.discriminator.build_graph((1, iterator.num_samples,
+            global_vars.NUM_SNPS, NUM_CHANNELS))
         self.discriminator.summary()
 
         self.cross_entropy =tf.keras.losses.BinaryCrossentropy(from_logits=True)
@@ -268,7 +266,7 @@ class PG_GAN:
         # add on entropy regularization (small penalty)
         real_entropy = scipy.stats.entropy(tf.nn.sigmoid(real_output))
         fake_entropy = scipy.stats.entropy(tf.nn.sigmoid(fake_output))
-        entropy = tf.math.scalar_mul(0.001/2, tf.math.add(real_entropy, \
+        entropy = tf.math.scalar_mul(0.001/2, tf.math.add(real_entropy,
             fake_entropy)) # can I just use +,*? TODO experiement with constant
 
         return total_loss, real_acc, fake_acc
@@ -283,13 +281,13 @@ class PG_GAN:
             real_output = self.discriminator(real_regions, training=True)
             fake_output = self.discriminator(generated_regions, training=True)
 
-            disc_loss, real_acc, fake_acc = self.discriminator_loss( \
+            disc_loss, real_acc, fake_acc = self.discriminator_loss(
                 real_output, fake_output)
 
         # gradient descent
-        gradients_of_discriminator = disc_tape.gradient(disc_loss, \
+        gradients_of_discriminator = disc_tape.gradient(disc_loss,
             self.discriminator.trainable_variables)
-        self.disc_optimizer.apply_gradients(zip(gradients_of_discriminator, \
+        self.disc_optimizer.apply_gradients(zip(gradients_of_discriminator,
             self.discriminator.trainable_variables))
 
         return real_acc, fake_acc, disc_loss
@@ -305,7 +303,7 @@ def get_discriminator(sample_sizes):
     if num_pops == 2:
         return discriminators.TwoPopModel(sample_sizes[0], sample_sizes[1])
     # else
-    return discriminators.ThreePopModel(sample_sizes[0], sample_sizes[1], \
+    return discriminators.ThreePopModel(sample_sizes[0], sample_sizes[1],
         sample_sizes[2])
 
 if __name__ == "__main__":

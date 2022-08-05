@@ -15,7 +15,11 @@ import real_data_random
 import simulation
 
 class Parameter:
-    """Holds information about evolutionary parameters to infer"""
+    """
+    Holds information about evolutionary parameters to infer.
+    Note: the value arg is NOT the starting value, just used as a default if
+    that parameter is not inferred, or the truth when training data is simulated
+    """
 
     def __init__(self, value, min, max, name):
         self.value = value
@@ -26,7 +30,7 @@ class Parameter:
 
     def __str__(self):
         s = '\t'.join(["NAME", "VALUE", "MIN", "MAX"]) + '\n'
-        s += '\t'.join([str(self.name), str(self.value), str(self.min), \
+        s += '\t'.join([str(self.name), str(self.value), str(self.min),
             str(self.max)])
         return s
 
@@ -60,9 +64,9 @@ class Parameter:
             return new_value
 
     def proposal_range(self, curr_lst, multiplier):
-        new_min = self.fit_to_range(norm(curr_lst[0], self.proposal_width * \
+        new_min = self.fit_to_range(norm(curr_lst[0], self.proposal_width *
             multiplier).rvs())
-        new_max = self.fit_to_range(norm(curr_lst[1], self.proposal_width * \
+        new_max = self.fit_to_range(norm(curr_lst[1], self.proposal_width *
             multiplier).rvs())
         if new_min <= new_max:
             return [new_min, new_max]
@@ -110,12 +114,6 @@ class ParamSet:
         self.m_AF_AS = Parameter(1.9e-5, 0.0, 0.01, "m_AF_AS")
         self.m_EU_AS = Parameter(9.6e-5, 0.0, 0.01, "m_EU_AS")
 
-        self.all = [self.Ne, self.reco, self.mut, \
-            self.N_anc, self.T_split, self.mig, self.N1, self.N2, self.growth, \
-            self.N3, self.T1, self.T2, self.N_A, self.N_B, self.N_AF, \
-            self.N_EU0, self.N_AS0, self.r_EU, self.r_AS, self.T_AF, self.T_B, \
-            self.T_EU_AS, self.m_AF_B, self.m_AF_EU, self.m_AF_AS, self.m_EU_AS]
-
     def update(self, names, values):
         """Based on generator proposal, update desired param values"""
         assert len(names) == len(values)
@@ -123,67 +121,18 @@ class ParamSet:
         for j in range(len(names)):
             param = names[j]
 
-            # go through all params
-            if param == "Ne":
-                self.Ne.value = values[j]
-            elif param == "reco":
-                self.reco.value = values[j]
-            elif param == "mut":
-                self.mut.value = values[j]
-            elif param == "N_anc":
-                self.N_anc.value = values[j]
-            elif param == "T_split":
-                self.T_split.value = values[j]
-            elif param == "mig":
-                self.mig.value = values[j]
-            elif param == "N1":
-                self.N1.value = values[j]
-            elif param == "N2":
-                self.N2.value = values[j]
-            elif param == "growth":
-                self.growth.value = values[j]
-            elif param == "N3":
-                self.N3.value = values[j]
-            elif param == "T1":
-                self.T1.value = values[j]
-            elif param == "T2":
-                self.T2.value = values[j]
-            elif param == "N_A":
-                self.N_A.value = values[j]
-            elif param == "N_B":
-                self.N_B.value = values[j]
-            elif param == "N_AF":
-                self.N_AF.value = values[j]
-            elif param == "N_EU0":
-                self.N_EU0.value = values[j]
-            elif param == "N_AS0":
-                self.N_AS0.value = values[j]
-            elif param == "r_EU":
-                self.r_EU.value = values[j]
-            elif param == "r_AS":
-                self.r_AS.value = values[j]
-            elif param == "T_AF":
-                self.T_AF.value = values[j]
-            elif param == "T_B":
-                self.T_B.value = values[j]
-            elif param == "T_EU_AS":
-                self.T_EU_AS.value = values[j]
-            elif param == "m_AF_B":
-                self.m_AF_B.value = values[j]
-            elif param == "m_AF_EU":
-                self.m_AF_EU.value = values[j]
-            elif param == "m_AF_AS":
-                self.m_AF_AS.value = values[j]
-            elif param == "m_EU_AS":
-                self.m_EU_AS.value = values[j]
-            else:
+            # credit: Alex Pan (https://github.com/apanana/pg-gan)
+            attr = getattr(self, param)
+            if attr == None:
                 sys.exit(param + " is not a recognized parameter.")
+            else:
+                attr.value = values[j]
 
 def parse_params(param_input, all_params):
     """See which params were desired for inference"""
     param_strs = param_input.split(',')
     parameters = []
-    for p in all_params.all:
+    for _, p in vars(ParamSet()).items():
         if p.name in param_strs:
             parameters.append(p)
 
@@ -200,7 +149,8 @@ def filter_func(x, rate): # currently not used
         return True
     return np.random.random() >= rate # keep (1-rate) of singletons
 
-def process_gt_dist(gt_matrix, dist_vec, region_len=False, real=False, neg1=True):
+def process_gt_dist(gt_matrix, dist_vec, region_len=False, real=False,
+    neg1=True):
     """
     Take in a genotype matrix and vector of inter-SNP distances. Return a 3D
     numpy array of the given n (haps) and S (SNPs) and 2 channels.
@@ -208,10 +158,11 @@ def process_gt_dist(gt_matrix, dist_vec, region_len=False, real=False, neg1=True
     """
     og_snps = gt_matrix.shape[0]
 
-    if (real and global_vars.FILTER_REAL_DATA) or (not real and global_vars.FILTER_SIMULATED):
+    if (real and global_vars.FILTER_REAL_DATA) or (not real and
+        global_vars.FILTER_SIMULATED):
         # mask
-        singleton_mask = np.array([filter_func(row, global_vars.FILTER_RATE, \
-                                   gt_matrix.shape[1] - 1) for row in gt_matrix])
+        singleton_mask = np.array([filter_func(row, global_vars.FILTER_RATE,
+            gt_matrix.shape[1] - 1) for row in gt_matrix])
 
         # reassign
         gt_matrix = gt_matrix[singleton_mask]
@@ -225,8 +176,9 @@ def process_gt_dist(gt_matrix, dist_vec, region_len=False, real=False, neg1=True
         print("gt", num_SNPs, "dist", len(dist_vec))
     assert num_SNPs == len(dist_vec)
 
-    S = num_SNPs if region_len else global_vars.NUM_SNPS # used for trimming (don't trim if region len)
-    
+    # used for trimming (don't trim if using the entire region)
+    S = num_SNPs if region_len else global_vars.NUM_SNPS
+
     # set up region
     region = np.zeros((n, S, 2), dtype=np.float32)
 
@@ -239,10 +191,10 @@ def process_gt_dist(gt_matrix, dist_vec, region_len=False, real=False, neg1=True
 
     # enough SNPs, take middle portion
     if mid >= half_S:
-        minor = major_minor(gt_matrix[mid-half_S:mid+ \
+        minor = major_minor(gt_matrix[mid-half_S:mid+
             other_half_S,:].transpose(), neg1)
         region[:,:,0] = minor
-        distances = np.vstack([np.copy(dist_vec[mid-half_S:mid+other_half_S]) \
+        distances = np.vstack([np.copy(dist_vec[mid-half_S:mid+other_half_S])
             for k in range(n)])
         region[:,:,1] = distances
 
@@ -292,25 +244,30 @@ def parse_args(in_file_data = None, param_values = None):
     parser = optparse.OptionParser(description='PG-GAN entry point')
 
     parser.add_option('-m', '--model', type='string',help='exp, im, ooa2, ooa3')
-    parser.add_option('-p', '--params', type='string', \
+    parser.add_option('-p', '--params', type='string',
         help='comma separated parameter list')
     parser.add_option('-d', '--data_h5', type='string', help='real data file')
     parser.add_option('-b', '--bed', type='string', help='bed file (mask)')
-    parser.add_option('-r', '--reco_folder', type='string', \
+    parser.add_option('-r', '--reco_folder', type='string',
         help='recombination maps')
     parser.add_option('-g', action="store_true", dest="grid",help='grid search')
     parser.add_option('-t', action="store_true", dest="toy", help='toy example')
-    parser.add_option('-s', '--seed', type='int', default=1833, \
+    parser.add_option('-s', '--seed', type='int', default=1833,
         help='seed for RNG')
-    parser.add_option('-n', '--sample_size', type='int', help='total sample size (assumes equal pop sizes)')
-    parser.add_option('-v', '--param_values', type='string', \
+    parser.add_option('-n', '--sample_size', type='int',
+        help='total sample size (assumes equal pop sizes)')
+    parser.add_option('-v', '--param_values', type='string',
         help='comma separated values corresponding to params')
 
     (opts, args) = parser.parse_args()
 
-    # the following section overrides params from the input file with the provided args
+    '''
+    The following section overrides params from the input file with the provided
+    args.
+    '''
 
-    # note: this series of checks looks like it could be simplified with list iteration:
+    # note: this series of checks looks like it could be simplified with list
+    #       iteration:
     # it can't be, bc the opts object can't be indexed--eg opts['model'] fails
     def param_mismatch(param, og, replacement):
         print("***** WARNING: MISMATCH BETWEEN IN FILE AND CMD ARGS: " + param +
@@ -340,10 +297,12 @@ def parse_args(in_file_data = None, param_values = None):
         if opts.reco_folder is None:
             opts.reco_folder = in_file_data['reco_folder']
         elif opts.reco_folder != in_file_data['reco_folder']:
-            param_mismatch("RECO_FOLDER", in_file_data['reco_folder'], opts.opts.reco_folder)
+            param_mismatch("RECO_FOLDER", in_file_data['reco_folder'],
+                opts.opts.reco_folder)
 
     if opts.param_values is not None:
-        arg_values = [float(val_str) for val_str in opts.param_values.split(',')]
+        arg_values = [float(val_str) for val_str in
+            opts.param_values.split(',')]
         if arg_values != param_values:
             param_mismatch("PARAM_VALUES", param_values, arg_values)
             param_values = arg_values # override at return
@@ -414,14 +373,14 @@ def read_demo_file(filename, Ne):
     with open(filename, 'r') as demo_file:
         for pop_params in demo_file:
             time, pop = pop_params.strip().split()
-            demos.append(msprime.PopulationParametersChange(time=float(time) \
+            demos.append(msprime.PopulationParametersChange(time=float(time)
                 * 4 * Ne, initial_size=float(pop) * Ne))
     return demos
 
 def process_opts(opts, summary_stats = False):
 
-    sample_size_total = global_vars.DEFAULT_SAMPLE_SIZE if opts.sample_size is None \
-                        else opts.sample_size
+    sample_size_total = global_vars.DEFAULT_SAMPLE_SIZE if opts.sample_size is \
+        None else opts.sample_size
 
     def get_sample_sizes(num_pops):
         return [sample_size_total//num_pops for i in range(num_pops)]
@@ -438,13 +397,13 @@ def process_opts(opts, summary_stats = False):
         # frac test isn't currently used in ss
 
         # if summary_stats:
-        #      iterator = real_data_random.RealDataRandomIterator(\
-        #         opts.data_h5, opts.bed, frac_test = \
+        #      iterator = real_data_random.RealDataRandomIterator(
+        #         opts.data_h5, opts.bed, frac_test =
         #         globals.FRAC_TEST)
         # else:
         # most typical case for real data
-        iterator = real_data_random.RealDataRandomIterator(\
-                                      opts.data_h5, opts.bed)
+        iterator = real_data_random.RealDataRandomIterator(opts.data_h5,
+            opts.bed)
 
     # parse model and simulator
     if opts.model == 'const':
@@ -491,14 +450,13 @@ def process_opts(opts, summary_stats = False):
 
     # generator
     sample_sizes = get_sample_sizes(num_pops)
-    generator = simulation.Generator(simulator, param_names, sample_sizes,\
-                                     opts.seed, mirror_real=real, \
-                                      reco_folder=opts.reco_folder)
+    generator = simulation.Generator(simulator, param_names, sample_sizes,
+        opts.seed, mirror_real=real, reco_folder=opts.reco_folder)
 
     if opts.data_h5 == None:
-        # "real data" is simulated wiwh fixed params
-        iterator = simulation.Generator(simulator, param_names, sample_sizes, \
-                                        opts.seed) # don't need reco_folder
+        # "real data" is simulated with fixed params
+        iterator = simulation.Generator(simulator, param_names, sample_sizes,
+            opts.seed) # don't need reco_folder
 
     return generator, iterator, parameters, sample_sizes
 

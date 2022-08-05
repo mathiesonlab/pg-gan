@@ -30,8 +30,8 @@ import util
 
 class Generator:
 
-    def __init__(self, simulator, param_names, sample_sizes, seed,\
-                 mirror_real=False, reco_folder=""):
+    def __init__(self, simulator, param_names, sample_sizes, seed,
+        mirror_real=False, reco_folder=""):
         self.simulator = simulator
         self.param_names = param_names
         self.sample_sizes = sample_sizes
@@ -46,26 +46,27 @@ class Generator:
             pop = reco_folder[-4: -1]
 
             if global_vars.NEW_DATA:
-                files = [reco_folder + pop + \
-                  "_recombination_map_hapmap_format_hg38_chr_" + str(i) + \
-                  ".txt" for i in global_vars.CHROM_RANGE]
+                files = [reco_folder + pop +
+                    "_recombination_map_hapmap_format_hg38_chr_" + str(i) +
+                    ".txt" for i in global_vars.CHROM_RANGE]
             else:
-                files = [reco_folder + "genetic_map_GRCh37_chr" + str(i) + ".txt" \
-                   for i in global_vars.CHROM_RANGE]
+                files = [reco_folder + "genetic_map_GRCh37_chr" + str(i) +
+                    ".txt" for i in global_vars.CHROM_RANGE]
 
             self.prior, self.weights = util.parse_hapmap_empirical_prior(files)
 
         else:
             self.prior, self.weights = [], []
 
-    def simulate_batch(self, batch_size=global_vars.BATCH_SIZE, params=[], region_len=False, real=False, neg1=True):
+    def simulate_batch(self, batch_size=global_vars.BATCH_SIZE, params=[],
+        region_len=False, real=False, neg1=True):
 
         # initialize 4D matrix (two channels for distances)
         if region_len:
             regions = []
         else:
-            regions = np.zeros((batch_size, self.num_samples, global_vars.NUM_SNPS, \
-                            2), dtype=np.float32) # two channels
+            regions = np.zeros((batch_size, self.num_samples,
+                global_vars.NUM_SNPS, 2), dtype=np.float32) # two channels
 
         # set up parameters
         sim_params = util.ParamSet()
@@ -80,19 +81,21 @@ class Generator:
         for i in range(batch_size):
             seed = self.rng.integers(1,high=2**32) # like GAN "noise"
 
-            ts = self.simulator(sim_params, self.sample_sizes, seed, \
-                                self.get_reco(sim_params))
+            ts = self.simulator(sim_params, self.sample_sizes, seed,
+                self.get_reco(sim_params))
             region = prep_region(ts, neg1, region_len=region_len)
 
             if region_len:
                 regions.append(region)
             else:
                 regions[i] = region
-            
+
         return regions
 
-    def real_batch(self, batch_size = global_vars.BATCH_SIZE, neg1=True, region_len=False):
-        return self.simulate_batch(batch_size=batch_size, real=True, region_len=region_len)
+    def real_batch(self, batch_size = global_vars.BATCH_SIZE, neg1=True,
+        region_len=False):
+        return self.simulate_batch(batch_size=batch_size, real=True, neg1=neg1,
+            region_len=region_len)
 
     def update_params(self, new_params):
         self.curr_params = new_params
@@ -115,11 +118,12 @@ def prep_region(ts, neg1, region_len):
 
     positions = [round(variant.site.position) for variant in ts.variants()]
     assert len(positions) == snps_total
-    dist_vec = [0] + [(positions[j+1] - positions[j])/global_vars.L for j in \
+    dist_vec = [0] + [(positions[j+1] - positions[j])/global_vars.L for j in
         range(snps_total-1)]
 
     # when mirroring real data
-    return util.process_gt_dist(gt_matrix, dist_vec, region_len=region_len, neg1=neg1)
+    return util.process_gt_dist(gt_matrix, dist_vec, region_len=region_len,
+        neg1=neg1)
 
 def simulate_im(params, sample_sizes, seed, reco):
     """Note this is a 2 population model"""
@@ -133,9 +137,9 @@ def simulate_im(params, sample_sizes, seed, reco):
     mig = params.mig.value
 
     population_configurations = [
-        msprime.PopulationConfiguration(sample_size=sample_sizes[0], \
+        msprime.PopulationConfiguration(sample_size=sample_sizes[0],
             initial_size = N1),
-        msprime.PopulationConfiguration(sample_size=sample_sizes[1], \
+        msprime.PopulationConfiguration(sample_size=sample_sizes[1],
             initial_size = N2)]
 
     # no migration initially
@@ -144,11 +148,11 @@ def simulate_im(params, sample_sizes, seed, reco):
     # directional (pulse)
     if mig >= 0:
         # migration from pop 1 into pop 0 (back in time)
-        mig_event = msprime.MassMigration(time = mig_time, source = 1, \
+        mig_event = msprime.MassMigration(time = mig_time, source = 1,
             destination = 0, proportion = abs(mig))
     else:
         # migration from pop 0 into pop 1 (back in time)
-        mig_event = msprime.MassMigration(time = mig_time, source = 0, \
+        mig_event = msprime.MassMigration(time = mig_time, source = 0,
             destination = 1, proportion = abs(mig))
 
     demographic_events = [
@@ -157,7 +161,7 @@ def simulate_im(params, sample_sizes, seed, reco):
 		msprime.MassMigration(
 			time = T_split, source = 1, destination = 0, proportion = 1.0),
         # change to ancestral size
-        msprime.PopulationParametersChange(time=T_split, initial_size=N_anc, \
+        msprime.PopulationParametersChange(time=T_split, initial_size=N_anc,
             population_id=0)
 	]
 
@@ -182,31 +186,31 @@ def simulate_ooa2(params, sample_sizes,seed, reco):
     mig = params.mig.value
 
     population_configurations = [
-        msprime.PopulationConfiguration(sample_size=sample_sizes[0], \
+        msprime.PopulationConfiguration(sample_size=sample_sizes[0],
             initial_size = params.N3.value), # YRI is first
-        msprime.PopulationConfiguration(sample_size=sample_sizes[1], \
+        msprime.PopulationConfiguration(sample_size=sample_sizes[1],
             initial_size = params.N2.value)] # CEU/CHB is second
 
     # directional (pulse)
     if mig >= 0:
         # migration from pop 1 into pop 0 (back in time)
-        mig_event = msprime.MassMigration(time = T2, source = 1, \
+        mig_event = msprime.MassMigration(time = T2, source = 1,
             destination = 0, proportion = abs(mig))
     else:
         # migration from pop 0 into pop 1 (back in time)
-        mig_event = msprime.MassMigration(time = T2, source = 0, \
+        mig_event = msprime.MassMigration(time = T2, source = 0,
             destination = 1, proportion = abs(mig))
 
     demographic_events = [
         mig_event,
         # change size of EUR
-        msprime.PopulationParametersChange(time=T2, \
+        msprime.PopulationParametersChange(time=T2,
             initial_size=params.N1.value, population_id=1),
 		# move all in deme 1 to deme 0
-		msprime.MassMigration(time = T1, source = 1, destination = 0, \
+		msprime.MassMigration(time = T1, source = 1, destination = 0,
             proportion = 1.0),
         # change to ancestral size
-        msprime.PopulationParametersChange(time=T1, \
+        msprime.PopulationParametersChange(time=T1,
             initial_size=params.N_anc.value, population_id=0)
 	]
 
@@ -231,9 +235,9 @@ def simulate_postOOA(params, sample_sizes, seed, reco):
     #m_EU_AS = params.m_EU_AS.value
 
     population_configurations = [
-        msprime.PopulationConfiguration(sample_size=sample_sizes[0], \
+        msprime.PopulationConfiguration(sample_size=sample_sizes[0],
             initial_size = params.N3.value), # CEU is first
-        msprime.PopulationConfiguration(sample_size=sample_sizes[1], \
+        msprime.PopulationConfiguration(sample_size=sample_sizes[1],
             initial_size = params.N2.value)] # CHB is second
 
     # symmetric migration
@@ -243,25 +247,25 @@ def simulate_postOOA(params, sample_sizes, seed, reco):
     # directional (pulse)
     if mig >= 0:
         # migration from pop 1 into pop 0 (back in time)
-        mig_event = msprime.MassMigration(time = T2/2, source = 1, \
+        mig_event = msprime.MassMigration(time = T2/2, source = 1,
             destination = 0, proportion = abs(mig))
     else:
         # migration from pop 0 into pop 1 (back in time)
-        mig_event = msprime.MassMigration(time = T2/2, source = 0, \
+        mig_event = msprime.MassMigration(time = T2/2, source = 0,
             destination = 1, proportion = abs(mig))
 
     demographic_events = [
         mig_event,
 		# move all in deme 1 to deme 0
-		msprime.MassMigration(time = T2, source = 1, destination = 0, \
+		msprime.MassMigration(time = T2, source = 1, destination = 0,
             proportion = 1.0),
         # set mig rate to zero (need if using migration_matrix)
         #msprime.MigrationRateChange(time=T2, rate=0),
         # ancestral bottleneck
-        msprime.PopulationParametersChange(time=T2, \
+        msprime.PopulationParametersChange(time=T2,
             initial_size=params.N1.value, population_id=0),
         # ancestral size
-        msprime.PopulationParametersChange(time=T1, \
+        msprime.PopulationParametersChange(time=T1,
             initial_size=params.N_anc.value, population_id=0)
 	]
 
@@ -286,11 +290,11 @@ def simulate_exp(params, sample_sizes, seed, reco):
     N0 = N2 / math.exp(-params.growth.value * T2)
 
     demographic_events = [
-        msprime.PopulationParametersChange(time=0, initial_size=N0, \
+        msprime.PopulationParametersChange(time=0, initial_size=N0,
             growth_rate=params.growth.value),
-        msprime.PopulationParametersChange(time=T2, initial_size=N2, \
+        msprime.PopulationParametersChange(time=T2, initial_size=N2,
             growth_rate=0),
-		msprime.PopulationParametersChange(time=params.T1.value, \
+		msprime.PopulationParametersChange(time=params.T1.value,
             initial_size=params.N1.value)
 	]
 
@@ -307,9 +311,9 @@ def simulate_const(params, sample_sizes, seed, reco):
     assert len(sample_sizes) == 1
 
     # simulate data
-    ts = msprime.simulate(sample_size=sum(sample_sizes), Ne=params.Ne.value, \
-        length=global_vars.L, mutation_rate=params.mut.value, recombination_rate=reco, \
-        random_seed = seed)
+    ts = msprime.simulate(sample_size=sum(sample_sizes), Ne=params.Ne.value,
+        length=global_vars.L, mutation_rate=params.mut.value,
+        recombination_rate=reco, random_seed = seed)
 
     return ts
 
@@ -338,9 +342,9 @@ def simulate_ooa3(params, sample_sizes, seed, reco):
     m_AF_AS = params.m_AF_AS.value
     m_EU_AS = params.m_EU_AS.value
 
-    model = sps.HomSap.ooa_3(N_A, N_B, N_AF, N_EU0, N_AS0, r_EU, r_AS, T_AF, \
+    model = sps.HomSap.ooa_3(N_A, N_B, N_AF, N_EU0, N_AS0, r_EU, r_AS, T_AF,
         T_B, T_EU_AS, m_AF_B, m_AF_EU, m_AF_AS, m_EU_AS)
-    samples = model.get_samples(sample_sizes[0], sample_sizes[1], \
+    samples = model.get_samples(sample_sizes[0], sample_sizes[1],
         sample_sizes[2]) #['YRI', 'CEU', 'CHB']
     engine = sps.engines.get_engine('msprime')
     ts = engine.simulate(model, contig, samples)

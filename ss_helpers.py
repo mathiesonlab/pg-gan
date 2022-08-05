@@ -26,7 +26,7 @@ NUM_LD  = 15
 ################################################################################
 
 def parse_mini_lst(mini_lst):
-    return [float(x.replace("[",'').replace("]",'').replace(",",'')) for x in \
+    return [float(x.replace("[",'').replace("]",'').replace(",",'')) for x in
         mini_lst]
 
 def add_to_lst(total_lst, mini_lst):
@@ -55,7 +55,7 @@ def parse_output(filename, return_acc=False):
     num_param = None
 
     trial_data = {}
-    
+
     for line in f:
 
         if line.startswith("{"):
@@ -73,7 +73,7 @@ def parse_output(filename, return_acc=False):
             trial_data['data_h5'] = clean_param_tkn(tokens[5])
             trial_data['bed_file'] = clean_param_tkn(tokens[7])
             trial_data['reco_folder'] = clean_param_tkn(tokens[9])
-                
+
         elif "Epoch 100" in line:
             tokens = line.split()
             disc_loss = float(tokens[3][:-1])
@@ -94,7 +94,8 @@ def parse_output(filename, return_acc=False):
     # Use -1 instead of iter for the last iteration
     final_params = [param_lst_all[i][-1] for i in range(num_param)]
     if return_acc:
-        return final_params, disc_loss_lst, real_acc_lst, fake_acc_lst, trial_data
+        return final_params, disc_loss_lst, real_acc_lst, fake_acc_lst, \
+            trial_data
     else:
         return final_params, trial_data
 
@@ -205,8 +206,8 @@ def compute_fst(raw):
 # PLOTTING FUNCTIONS
 ################################################################################
 
-def plot_sfs(ax, real_sfs, sim_sfs, real_color, sim_color, pop="", \
-    sim_label="", single=False):
+def plot_sfs(ax, real_sfs, sim_sfs, real_color, sim_color, pop="", sim_label="",
+    single=False):
     """Plot first 10 entries of the SFS"""
     # average over regions
     num_sfs = len(real_sfs)
@@ -214,7 +215,7 @@ def plot_sfs(ax, real_sfs, sim_sfs, real_color, sim_color, pop="", \
     sim = [sum(ss)/num_sfs for ss in sim_sfs]
 
     # plotting
-    ax.bar([x-0.3 for x in range(num_sfs)], real, label=pop, width=0.4, \
+    ax.bar([x-0.3 for x in range(num_sfs)], real, label=pop, width=0.4,
         color=real_color)
     ax.bar(range(num_sfs), sim, label=sim_label, width=0.4, color=sim_color)
     ax.set_xlim(-1,len(real_sfs))
@@ -225,10 +226,10 @@ def plot_sfs(ax, real_sfs, sim_sfs, real_color, sim_color, pop="", \
     if single:
         ax.legend()
     else:
-        ax.text(.85, .85, pop, horizontalalignment='center', \
+        ax.text(.85, .85, pop, horizontalalignment='center',
             transform=ax.transAxes, fontsize=18)
 
-def plot_dist(ax, real_dist, sim_dist, real_color, sim_color, pop="", \
+def plot_dist(ax, real_dist, sim_dist, real_color, sim_color, pop="",
     sim_label="", single=False):
     """Plot inter-SNP distances, measure of SNP density"""
 
@@ -242,10 +243,10 @@ def plot_dist(ax, real_dist, sim_dist, real_color, sim_color, pop="", \
     if single:
         ax.legend()
     else:
-        ax.text(.85, .85, pop, horizontalalignment='center', \
+        ax.text(.85, .85, pop, horizontalalignment='center',
             transform=ax.transAxes, fontsize=18)
 
-def plot_ld(ax, real_ld, sim_ld, real_color, sim_color, pop="", sim_label="",\
+def plot_ld(ax, real_ld, sim_ld, real_color, sim_color, pop="", sim_label="",
     single=False):
     """Plot LD distribution as a function of distance between SNPs"""
 
@@ -258,9 +259,9 @@ def plot_ld(ax, real_ld, sim_ld, real_color, sim_color, pop="", sim_label="",\
     sim_stddev = [np.std(ss) for ss in sim_ld]
 
     # plotting
-    ax.errorbar(dist_bins, real_mean, yerr=real_stddev, color=real_color, \
+    ax.errorbar(dist_bins, real_mean, yerr=real_stddev, color=real_color,
         label=pop)
-    ax.errorbar([x+150 for x in dist_bins], sim_mean, yerr=sim_stddev, \
+    ax.errorbar([x+150 for x in dist_bins], sim_mean, yerr=sim_stddev,
         color=sim_color, label=sim_label)
     ax.set_xlabel("distance between SNPs")
     ax.set_ylabel(r'LD ($r^2$)')
@@ -269,28 +270,33 @@ def plot_ld(ax, real_ld, sim_ld, real_color, sim_color, pop="", sim_label="",\
     if single:
         ax.legend()
     else:
-        ax.text(.85, .85, pop, horizontalalignment='center', \
+        ax.text(.85, .85, pop, horizontalalignment='center',
             transform=ax.transAxes, fontsize=18)
 
-def plot_generic(ax, name, real, sim, real_color, sim_color, pop="", \
+def plot_generic(ax, name, real, sim, real_color, sim_color, pop="",
     sim_label="", single=False):
     """Plot a generic stat like Taj D, pi, num haps"""
 
     # plotting
-    sns.distplot(real, ax=ax, color=real_color, label=pop)
-    sns.distplot(sim, ax=ax, color=sim_color, label=sim_label)
-    ax.set(xlabel=name)
-    if name == "number of haplotypes":
+    if name == "number of haplotypes": # use histplot to avoid binning issues
+        sns.histplot(real, ax=ax, color=real_color, label=pop, binwidth=1,
+            kde=True, stat="density", edgecolor=None)
+        sns.histplot(sim, ax=ax, color=sim_color, label=sim_label, binwidth=1,
+            kde=True, stat="density", edgecolor=None)
         ax.set_xlim(0,100)
+    else:
+        sns.distplot(real, ax=ax, color=real_color, label=pop)
+        sns.distplot(sim, ax=ax, color=sim_color, label=sim_label)
+    ax.set(xlabel=name)
 
     # legend
     if single:
         ax.legend()
     else:
-        ax.text(.85, .85, pop, horizontalalignment='center', \
+        ax.text(.85, .85, pop, horizontalalignment='center',
             transform=ax.transAxes, fontsize=18)
 
-def plot_fst(ax, real_fst, sim_fst, real_label, sim_label, real_color, \
+def plot_fst(ax, real_fst, sim_fst, real_label, sim_label, real_color,
     sim_color):
     """Plot Fst"""
     sns.distplot(real_fst, ax=ax, label=real_label, color=real_color)
@@ -335,7 +341,7 @@ def stats_all(matrices, matrices_region):
         matrix_region = matrices_region[i]
         raw_region = matrix_region[:,:,0].transpose()
         intersnp_region = matrix_region[:,:,1][0] # all the same
-        pos_region = [sum(intersnp_region[:i]) for i in \
+        pos_region = [sum(intersnp_region[:i]) for i in
             range(len(intersnp_region))]
         assert len(pos_region) == len(intersnp_region)
         vm_region = libsequence.VariantMatrix(raw_region, pos_region)
