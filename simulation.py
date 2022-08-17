@@ -102,9 +102,7 @@ class Generator:
 
     def get_reco(self, params):
         if self.prior == []:
-            reco =  np.random.normal(1e-8, 1e-8)
-            reco = params.reco.value if reco <= 0 else reco
-            return reco
+            return params.reco.value
 
         return draw_background_rate_from_prior(self.prior, self.weights)
 
