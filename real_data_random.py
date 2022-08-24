@@ -87,14 +87,13 @@ def read_mask(filename):
         tokens = line.split()
         chrom_str = tokens[0][3:]
         if chrom_str != 'X' and chrom_str != 'Y':
-            chrom = int(chrom_str)
             begin = int(tokens[1])
             end = int(tokens[2])
 
-            if chrom in mask_dict:
-                mask_dict[chrom].append([begin,end])
+            if chrom_str in mask_dict:
+                mask_dict[chrom_str].append([begin,end])
             else:
-                mask_dict[chrom] = [[begin,end]]
+                mask_dict[chrom_str] = [[begin,end]]
 
     f.close()
     return mask_dict
@@ -207,9 +206,8 @@ class RealDataRandomIterator:
         # different if region_len
         positions_S = self.pos_all[start_idx:end_idx_S]
 
-        chrom_num = int(start_chrom[3:]) if global_vars.NEW_DATA else \
-            int(start_chrom)
-        region = Region(chrom_num, start_base, end_base)
+        chrom = global_vars.parse_chrom(start_chrom)
+        region = Region(chrom, start_base, end_base)
         result = region.inside_mask(self.mask_dict)
 
         # if we do have an accessible region

@@ -2,7 +2,6 @@
 # section A: general -----------------------------------------------------------
 NUM_SNPS = 36       # number of seg sites, should be divisible by 4
 L = 50000           # heuristic to get enough SNPs for simulations (50,000 or fifty-thousand)
-CHROM_RANGE = range(1,23)
 BATCH_SIZE = 50
 
 DEFAULT_SEED = 1833
@@ -43,7 +42,36 @@ def update_ss_labels(pop_names):
     assert len(SS_LABELS) == len(SS_COLORS)
 
 # Section D: alternate data format options--------------------------------------
-NEW_DATA = False # 1000 Genomes high-coverage data
+
+HUMAN_CHROM_RANGE = range(1, 23) # Human chroms, 1000G doesn't use XY
+
+'''
+Rewrite this function to appropriately collect a list of
+reco files. Not called if reco_folder isn't provided.
+
+The file list can be defined directly for ease, i.e.
+files = ["file1", "file2", ... ]
+'''
+def get_reco_files(reco_folder):
+    # DEFAULT IS FOR hg19 FORMAT
+    files = [reco_folder + "genetic_map_GRCh37_chr" + str(i) +
+             ".txt" for i in HUMAN_CHROM_RANGE]
+
+    # for high coverage/ hg38, comment the above line, and uncomment the following:
+    # pop = reco_folder[-4: -1]
+    # files = [reco_folder + pop + "_recombination_map_hapmap_format_hg38_chr_" + str(i) +
+    #          ".txt" for i in HUMAN_CHROM_RANGE]
+        
+    return files
+
+'''
+Likewise, overwrite for parsing for your datafile
+'''
+def parse_chrom(chrom_str):
+    return chrom_str # hg19 option
+
+    # for hg38, comment out the above line and uncomment the line below:
+    # return chrom_str[3:]
 
 '''The high-coverage data ("new data") appears to have partial filtering on
 singletons. It is recommended, if using the high-coverage data, to enable

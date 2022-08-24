@@ -43,15 +43,7 @@ class Generator:
 
         # for real data, use HapMap
         if mirror_real and reco_folder != None:
-            pop = reco_folder[-4: -1]
-
-            if global_vars.NEW_DATA:
-                files = [reco_folder + pop +
-                    "_recombination_map_hapmap_format_hg38_chr_" + str(i) +
-                    ".txt" for i in global_vars.CHROM_RANGE]
-            else:
-                files = [reco_folder + "genetic_map_GRCh37_chr" + str(i) +
-                    ".txt" for i in global_vars.CHROM_RANGE]
+            files = global_vars.get_reco_files(reco_folder)
 
             self.prior, self.weights = util.parse_hapmap_empirical_prior(files)
 
