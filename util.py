@@ -379,11 +379,9 @@ def read_demo_file(filename, Ne):
 
 def process_opts(opts, summary_stats = False):
 
-    sample_size_total = global_vars.DEFAULT_SAMPLE_SIZE if opts.sample_size is \
-        None else opts.sample_size
-
-    def get_sample_sizes(num_pops):
-        return [sample_size_total//num_pops for i in range(num_pops)]
+    if 'reco' in opts.params and opts.reco_folder is not None:
+        print('Recombination rate cannot be inferred and read from files. Please select one and try again. Exiting.')
+        sys.exit()
 
     # parameter defaults
     all_params = ParamSet()
@@ -449,7 +447,10 @@ def process_opts(opts, summary_stats = False):
         print("FILTERING SINGLETONS")
 
     # generator
-    sample_sizes = get_sample_sizes(num_pops)
+    sample_size_total = global_vars.DEFAULT_SAMPLE_SIZE if opts.sample_size is \
+        None else opts.sample_size
+    sample_sizes = [sample_size_total//num_pops for i in range(num_pops)]
+    
     generator = simulation.Generator(simulator, param_names, sample_sizes,
         opts.seed, mirror_real=real, reco_folder=opts.reco_folder)
 
