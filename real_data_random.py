@@ -180,32 +180,25 @@ class RealDataRandomIterator:
         # inclusive
         start_idx = random.randrange(self.num_snps - global_vars.NUM_SNPS)
 
-        # go by region len or by SNPs
-        end_idx_len = self.find_end(start_idx)
-
-        if end_idx_len == -1:
-            return self.real_region(neg1, region_len) # try again
-
         if region_len:
-            end_idx_S = end_idx_len
+            end_idx = self.find_end(start_idx)
+            if end_idx == -1:
+                return self.real_region(neg1, region_len) # try again
         else:
-            end_idx_S = start_idx + global_vars.NUM_SNPS # exclusive
+            end_idx = start_idx + global_vars.NUM_SNPS # exclusive
 
         # make sure we don't span two chroms
         start_chrom = self.chrom_all[start_idx]
-        end_chrom = self.chrom_all[end_idx_S-1] # inclusive here
+        end_chrom = self.chrom_all[end_idx-1] # inclusive here
 
         if start_chrom != end_chrom:
             #print("bad chrom", start_chrom, end_chrom)
             return self.real_region(neg1, region_len) # try again
 
-        hap_data = self.haps_all[start_idx:end_idx_S, :]
+        hap_data = self.haps_all[start_idx:end_idx, :]
         start_base = self.pos_all[start_idx]
-        end_base = self.pos_all[end_idx_S]
-        end_base_len = self.pos_all[end_idx_len]
-        positions_len = self.pos_all[start_idx:end_idx_len]
-        # different if region_len
-        positions_S = self.pos_all[start_idx:end_idx_S]
+        end_base = self.pos_all[end_idx]
+        positions = self.pos_all[start_idx:end_idx]
 
         chrom_num = int(start_chrom[3:]) if global_vars.NEW_DATA else \
             int(start_chrom)
@@ -215,8 +208,8 @@ class RealDataRandomIterator:
         # if we do have an accessible region
         if result:
             # if region_len, then positions_S is actually positions_len
-            dist_vec = [0] + [(positions_S[j+1] - positions_S[j])/global_vars.L
-                for j in range(len(positions_S)-1)]
+            dist_vec = [0] + [(positions[j+1] - positions[j])/global_vars.L
+                for j in range(len(positions)-1)]
 
             after = util.process_gt_dist(hap_data, dist_vec,
                 region_len=region_len, real=True, neg1=neg1)

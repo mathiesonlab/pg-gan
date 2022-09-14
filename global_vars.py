@@ -20,8 +20,8 @@ TRIAL_DATA = { 'model': 'const', 'params': 'Ne', 'data_h5': None,
                'bed_file': None, 'reco_folder': None, 'param_values': '10000.'}
 
 # section C: summary stats customization----------------------------------------
-COLOR_DICT = {"YRI": 'darkorange',"CEU": 'blue',"CHB": 'green', "MXL": 'red',
-    "simulation": 'gray'}
+COLOR_DICT = {"YRI": "darkorange","CEU": "blue","CHB": "green", "MXL": "red",
+              "simulation": "gray", "msprime": "purple"}
 
 SS_LABELS = []
 SS_COLORS = []
@@ -33,6 +33,9 @@ at the end.
 def update_ss_labels(pop_names):
     # SS_LABELS is a list of string labels, ex ["CEU", "YRI", "CHB", "simulation"]
     # or ["msprime", "SLiM"]
+    if pop_names == '':
+        pop_names = 'msprime'
+    
     SS_LABELS.extend(pop_names.split("_"))
     SS_LABELS.append("simulation")
 
