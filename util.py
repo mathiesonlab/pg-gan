@@ -298,7 +298,7 @@ def parse_args(in_file_data = None, param_values = None):
             opts.reco_folder = in_file_data['reco_folder']
         elif opts.reco_folder != in_file_data['reco_folder']:
             param_mismatch("RECO_FOLDER", in_file_data['reco_folder'],
-                opts.opts.reco_folder)
+                opts.reco_folder)
 
     if opts.param_values is not None:
         arg_values = [float(val_str) for val_str in
