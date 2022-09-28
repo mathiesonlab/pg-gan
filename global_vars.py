@@ -34,7 +34,7 @@ def update_ss_labels(pop_names):
     # or ["msprime", "SLiM"]
     if pop_names == '':
         pop_names = 'msprime'
-    
+
     SS_LABELS.extend(pop_names.split("_"))
     SS_LABELS.append("simulation")
 
@@ -64,7 +64,7 @@ def get_reco_files(reco_folder):
     # pop = reco_folder[-4: -1]
     # files = [reco_folder + pop + "_recombination_map_hapmap_format_hg38_chr_" + str(i) +
     #          ".txt" for i in HUMAN_CHROM_RANGE]
-        
+
     return files
 
 '''
@@ -76,8 +76,8 @@ def parse_chrom(chrom):
 
     return chrom # hg19 option
 
-    # for hg38, comment out the above line and uncomment the line below:
-    # return chrom_str[3:]
+    # for hg38, replace the above with
+    # return chrom[3:]
 
 '''The high-coverage data ("new data") appears to have partial filtering on
 singletons. It is recommended, if using the high-coverage data, to enable
