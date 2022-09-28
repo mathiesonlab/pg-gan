@@ -16,7 +16,7 @@ FRAC_TEST = 0.1 # depricated
 # Model, params, and param_values must be defined
 OVERWRITE_TRIAL_DATA = False
 TRIAL_DATA = { 'model': 'const', 'params': 'Ne', 'data_h5': None,
-               'bed_file': None, 'reco_folder': None, 'param_values': '10000.'}
+               'bed_file': None, 'reco_folder': None, 'param_values': [1000.]}
 
 # section C: summary stats customization----------------------------------------
 COLOR_DICT = {"YRI": "darkorange","CEU": "blue","CHB": "green", "MXL": "red",
@@ -70,8 +70,11 @@ def get_reco_files(reco_folder):
 '''
 Likewise, overwrite for parsing for your datafile
 '''
-def parse_chrom(chrom_str):
-    return chrom_str # hg19 option
+def parse_chrom(chrom):
+    if isinstance(chrom, bytes):
+        return chrom.decode("utf-8")
+
+    return chrom # hg19 option
 
     # for hg38, comment out the above line and uncomment the line below:
     # return chrom_str[3:]
