@@ -1,8 +1,8 @@
 """
 Summary stat helpers for computing and plotting summary statistics.
 Note: "real" should alwasy be first, followed by simulated.
-Author: Sara Mathieson
-Date: 2/2/21
+Author: Sara Mathieson, Rebecca Riley
+Date: 9/27/22
 """
 
 # TODO some of these could be replaced with tskit
@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+# our imports
 import global_vars
 
 # GLOBALS

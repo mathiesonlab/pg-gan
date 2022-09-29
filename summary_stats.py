@@ -1,8 +1,8 @@
 """
 Compare summary statistics from real data with data simulated under the
 inferred parameters.
-Author: Sara Mathieson
-Date: 2/6/21
+Author: Sara Mathieson, Rebecca Riley
+Date: 9/27/22
 """
 
 # python imports

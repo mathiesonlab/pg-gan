@@ -1,8 +1,8 @@
 """
 Allows us to read in real data regions randomly, and also use a mask (bed
 format) file so we don't use regions that are uncallable.
-Author: Sara Mathieson
-Date: 2/4/21
+Author: Sara Mathieson, Rebecca Riley
+Date: 9/27/22
 """
 
 # python imports

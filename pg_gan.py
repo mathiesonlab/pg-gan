@@ -1,23 +1,20 @@
 """
 Application entry point for PG-GAN.
-Author: Sara Mathieson, Zhanpeng Wang, Jiaping Wang
-Date 2/4/21
+Author: Sara Mathieson, Zhanpeng Wang, Jiaping Wang, Rebecca Riley
+Date 9/27/22
 """
 
 # python imports
 import datetime
-import math
 import numpy as np
-import random
 import sys
 import tensorflow as tf
 import scipy.stats
 
 # our imports
-import discriminators
+import discriminator
 import global_vars
 import util
-
 from real_data_random import Region
 
 # globals for simulated annealing
@@ -44,21 +41,21 @@ def main():
     # set up seeds
     if opts.seed != None:
         np.random.seed(opts.seed)
-        random.seed(opts.seed)
         tf.random.set_seed(opts.seed)
 
     generator, iterator, parameters, sample_sizes = util.process_opts(opts)
-    discriminator = get_discriminator(sample_sizes)
+    #disc = discriminator.MultiPopModel(sample_sizes)
+    disc = get_discriminator(sample_sizes)
 
     # grid search
     if opts.grid:
         print("Grid search not supported right now")
         sys.exit()
-        #posterior, loss_lst = grid_search(discriminator, samples, simulator,
+        #posterior, loss_lst = grid_search(disc, samples, simulator,
         #    iterator, parameters, opts.seed)
     # simulated annealing
     else:
-        posterior, loss_lst = simulated_annealing(generator, discriminator,
+        posterior, loss_lst = simulated_annealing(generator, disc,
             iterator, parameters, opts.seed, toy=opts.toy)
 
     print(posterior)
@@ -68,12 +65,12 @@ def main():
 # SIMULATED ANNEALING
 ################################################################################
 
-def simulated_annealing(generator, discriminator, iterator, parameters, seed,
+def simulated_annealing(generator, disc, iterator, parameters, seed,
     toy=False):
     """Main function that drives GAN updates"""
 
     # main object for pg-gan
-    pg_gan = PG_GAN(generator, discriminator, iterator, parameters, seed)
+    pg_gan = PG_GAN(generator, disc, iterator, parameters, seed)
 
     # find starting point through pre-training (update generator in method)
     if not toy:
@@ -188,12 +185,12 @@ def grid_search(model_type, samples, demo_file, simulator, iterator, parameters,
 
 class PG_GAN:
 
-    def __init__(self, generator, discriminator, iterator, parameters, seed):
+    def __init__(self, generator, disc, iterator, parameters, seed):
         """Setup the model and training framework"""
 
         # set up generator and discriminator
         self.generator = generator
-        self.discriminator = discriminator
+        self.discriminator = disc
         self.iterator = iterator # for training data (real or simulated)
         self.parameters = parameters
 
@@ -299,11 +296,11 @@ class PG_GAN:
 def get_discriminator(sample_sizes):
     num_pops = len(sample_sizes)
     if num_pops == 1:
-        return discriminators.OnePopModel()
+        return discriminator.OnePopModel()
     if num_pops == 2:
-        return discriminators.TwoPopModel(sample_sizes[0], sample_sizes[1])
+        return discriminator.TwoPopModel(sample_sizes[0], sample_sizes[1])
     # else
-    return discriminators.ThreePopModel(sample_sizes[0], sample_sizes[1],
+    return discriminator.ThreePopModel(sample_sizes[0], sample_sizes[1],
         sample_sizes[2])
 
 if __name__ == "__main__":
