@@ -16,7 +16,7 @@ FRAC_TEST = 0.1 # depricated
 # Model, params, and param_values must be defined
 OVERWRITE_TRIAL_DATA = False
 TRIAL_DATA = { 'model': 'const', 'params': 'Ne', 'data_h5': None,
-               'bed_file': None, 'reco_folder': None, 'param_values': '10000.'}
+               'bed_file': None, 'reco_folder': None, 'param_values': [1000.]}
 
 # section C: summary stats customization----------------------------------------
 COLOR_DICT = {"YRI": "darkorange","CEU": "blue","CHB": "green", "MXL": "red",
@@ -34,7 +34,7 @@ def update_ss_labels(pop_names):
     # or ["msprime", "SLiM"]
     if pop_names == '':
         pop_names = 'msprime'
-    
+
     SS_LABELS.extend(pop_names.split("_"))
     SS_LABELS.append("simulation")
 
@@ -64,17 +64,20 @@ def get_reco_files(reco_folder):
     # pop = reco_folder[-4: -1]
     # files = [reco_folder + pop + "_recombination_map_hapmap_format_hg38_chr_" + str(i) +
     #          ".txt" for i in HUMAN_CHROM_RANGE]
-        
+
     return files
 
 '''
 Likewise, overwrite for parsing for your datafile
 '''
-def parse_chrom(chrom_str):
-    return chrom_str # hg19 option
+def parse_chrom(chrom):
+    if isinstance(chrom, bytes):
+        return chrom.decode("utf-8")
 
-    # for hg38, comment out the above line and uncomment the line below:
-    # return chrom_str[3:]
+    return chrom # hg19 option
+
+    # for hg38, replace the above with
+    # return chrom[3:]
 
 '''The high-coverage data ("new data") appears to have partial filtering on
 singletons. It is recommended, if using the high-coverage data, to enable
