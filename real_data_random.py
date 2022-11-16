@@ -259,7 +259,7 @@ if __name__ == "__main__":
     # test file
     filename = sys.argv[1]
     bed_file = sys.argv[2]
-    iterator = RealDataRandomIterator(filename, bed_file)
+    iterator = RealDataRandomIterator(filename, global_vars.DEFAULT_SEED, bed_file)
 
     start_time = datetime.datetime.now()
     for i in range(100):
@@ -271,5 +271,5 @@ if __name__ == "__main__":
 
     # test find_end
     for i in range(10):
-        start_idx = random.randrange(iterator.num_snps-global_vars.NUM_SNPS)
+        start_idx = iterator.rng.integers(0, iterator.num_snps-global_vars.NUM_SNPS)
         iterator.find_end(start_idx)
