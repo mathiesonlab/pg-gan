@@ -288,8 +288,9 @@ def process_opts(opts, summary_stats = False):
         #         globals.FRAC_TEST)
         # else:
         # most typical case for real data
-        iterator = real_data_random.RealDataRandomIterator(opts.data_h5,
-            opts.bed)
+        iterator = real_data_random.RealDataRandomIterator(filename=opts.data_h5,
+                                                           seed=opts.seed,
+                                                           bed_file=opts.bed)
 
     # parse model and simulator
     if opts.model == 'const':

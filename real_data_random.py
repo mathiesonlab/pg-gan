@@ -9,7 +9,7 @@ Date: 9/27/22
 from collections import defaultdict
 import h5py
 import numpy as np
-import random
+from numpy.random import default_rng
 import sys
 import datetime
 
@@ -116,7 +116,7 @@ def binary_search(q, lst):
 
 class RealDataRandomIterator:
 
-    def __init__(self, filename, bed_file=None, chrom_starts=False):
+    def __init__(self, filename, seed, bed_file=None, chrom_starts=False):
         callset = h5py.File(filename, mode='r')
         print(list(callset.keys()))
         # output: ['GT'] ['CHROM', 'POS']
@@ -141,6 +141,8 @@ class RealDataRandomIterator:
         # mask
         self.mask_dict = read_mask(bed_file) if bed_file is not None else None
 
+        self.rng = default_rng(seed)
+        
         # useful for fastsimcoal and msmc
         if chrom_starts:
             self.chrom_counts = defaultdict(int)
@@ -175,7 +177,7 @@ class RealDataRandomIterator:
 
     def real_region(self, neg1, region_len):
         # inclusive
-        start_idx = random.randrange(self.num_snps - global_vars.NUM_SNPS)
+        start_idx = self.rng.integers(0, self.num_snps - global_vars.NUM_SNPS)
 
         if region_len:
             end_idx = self.find_end(start_idx)
@@ -257,7 +259,7 @@ if __name__ == "__main__":
     # test file
     filename = sys.argv[1]
     bed_file = sys.argv[2]
-    iterator = RealDataRandomIterator(filename, bed_file)
+    iterator = RealDataRandomIterator(filename, global_vars.DEFAULT_SEED, bed_file)
 
     start_time = datetime.datetime.now()
     for i in range(100):
@@ -269,5 +271,5 @@ if __name__ == "__main__":
 
     # test find_end
     for i in range(10):
-        start_idx = random.randrange(iterator.num_snps-global_vars.NUM_SNPS)
+        start_idx = iterator.rng.integers(0, iterator.num_snps-global_vars.NUM_SNPS)
         iterator.find_end(start_idx)
