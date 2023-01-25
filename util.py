@@ -289,8 +289,9 @@ def process_opts(opts, summary_stats = False):
         #         globals.FRAC_TEST)
         # else:
         # most typical case for real data
-        iterator = real_data_random.RealDataRandomIterator(opts.data_h5,
-            opts.bed)
+        iterator = real_data_random.RealDataRandomIterator(filename=opts.data_h5,
+                                                           seed=opts.seed,
+                                                           bed_file=opts.bed)
         ss_total = iterator.num_samples
 
     # parse model and simulator
@@ -337,7 +338,7 @@ def process_opts(opts, summary_stats = False):
         print("FILTERING SINGLETONS")
 
     # generator
-    sample_size_total = ss_total if opts.sample_size is None else opts.sample_size
+    sample_size_total = if opts.sample_size is None else opts.sample_size
     sample_sizes = [sample_size_total//num_pops for i in range(num_pops)]
 
     gen = generator.Generator(simulator, param_names, sample_sizes,

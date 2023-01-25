@@ -86,10 +86,10 @@ class Generator:
         if self.prior == []:
             return params.reco.value
 
-        return draw_background_rate_from_prior(self.prior, self.weights)
+        return draw_background_rate_from_prior(self.prior, self.weights, self.rng)
 
-def draw_background_rate_from_prior(prior_rates, prob):
-    return np.random.choice(prior_rates, p=prob)
+def draw_background_rate_from_prior(prior_rates, prob, rng):
+    return rng.choice(prior_rates, p=prob)
 
 def prep_region(ts, neg1, region_len):
     """Gets simulated data ready"""
@@ -116,5 +116,5 @@ if __name__ == "__main__":
     generator = Generator(simulation.simulate_exp, ["N1", "T1"], [20],
                           global_vars.DEFAULT_SEED)
     generator.update_params([params.N1.value, params.T1.value])
-    mini_batch = generator.simulate_batch()
+    mini_batch = generator.simulate_batch(batch_size=batch_size)
     print("x", mini_batch.shape)
