@@ -338,7 +338,8 @@ def process_opts(opts, summary_stats = False):
         print("FILTERING SINGLETONS")
 
     # generator
-    sample_size_total = if opts.sample_size is None else opts.sample_size
+    sample_size_total = global_vars.DEFAULT_SAMPLE_SIZE if opts.sample_size is \
+        None else opts.sample_size
     sample_sizes = [sample_size_total//num_pops for i in range(num_pops)]
 
     gen = generator.Generator(simulator, param_names, sample_sizes,
