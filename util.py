@@ -277,6 +277,7 @@ def process_opts(opts, summary_stats = False):
     param_names = [p.name for p in parameters]
 
     real = False
+    ss_total = global_vars.DEFAULT_SAMPLE_SIZE
     # if real data provided
     if opts.data_h5 is not None: # h5 is None option at end of func
         real = True
@@ -291,6 +292,7 @@ def process_opts(opts, summary_stats = False):
         iterator = real_data_random.RealDataRandomIterator(filename=opts.data_h5,
                                                            seed=opts.seed,
                                                            bed_file=opts.bed)
+        ss_total = iterator.num_samples
 
     # parse model and simulator
     if opts.model == 'const':
