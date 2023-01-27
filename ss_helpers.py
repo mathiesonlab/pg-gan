@@ -2,11 +2,8 @@
 Summary stat helpers for computing and plotting summary statistics.
 Note: "real" should alwasy be first, followed by simulated.
 Author: Sara Mathieson, Rebecca Riley
-Date: 9/27/22
+Date: 1/27/23
 """
-
-# TODO some of these could be replaced with tskit
-# https://tskit.readthedocs.io/en/stable/python-api.html#tskit.TreeSequence
 
 # python imports
 import allel
@@ -233,6 +230,7 @@ def plot_sfs(ax, real_sfs, sim_sfs, real_color, sim_color, pop="", sim_label="",
 def plot_dist(ax, real_dist, sim_dist, real_color, sim_color, pop="",
     sim_label="", single=False):
     """Plot inter-SNP distances, measure of SNP density"""
+    # TODO remove all distplot and roll this into plot_generic
 
     # plotting
     sns.distplot(real_dist, ax=ax, label=pop, color=real_color)
