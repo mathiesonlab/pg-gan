@@ -33,7 +33,6 @@ def update_ss_labels(pop_names, num_pops = 1):
     # SS_LABELS is a list of string labels, ex ["CEU", "YRI", "CHB", "simulation"]
     # or ["msprime", "SLiM"]
     if pop_names == "":
-        # switch
         if num_pops == 1:
             pop_labels = ["msprime"]
         else: # works for up to 7 populations
