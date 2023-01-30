@@ -1,5 +1,5 @@
 """
-Utility functions and classes (including default parameters).
+Parameter class for pg-gan, including default values for common models.
 Author: Sara Mathieson, Rebecca Riley
 Date: 9/27/22
 """

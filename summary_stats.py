@@ -20,8 +20,15 @@ import util
 
 # globals
 NUM_TRIAL = 5000
-NAMES = ["Tajima's D", r'pairwise heterozygosity ($\pi$)', \
-    "number of haplotypes"]
+# statistic names
+NAMES = [
+    "minor allele count (SFS)",
+    "inter-SNP distances",
+    "distance between SNPs",
+    "Tajima's D",
+    r'pairwise heterozygosity ($\pi$)',
+    "number of haplotypes",
+    "Hudson's Fst"]
 FST_COLOR = "purple"
 
 # for ooa2 (YRI/CEU) (no longer supported)
@@ -109,13 +116,13 @@ def main():
         sim_matrices_region, sample_sizes)
 
     # stats for all populations
-    real_tuple_lst = []
-    sim_tuple_lst = []
+    real_stats_lst = []
+    sim_stats_lst = []
     for p in range(num_pop):
-        real_stats_tuple = ss_helpers.stats_all(real_all[p], real_region_all[p])
-        sim_stats_tuple = ss_helpers.stats_all(sim_all[p], sim_region_all[p])
-        real_tuple_lst.append(real_stats_tuple)
-        sim_tuple_lst.append(sim_stats_tuple)
+        real_stats_pop = ss_helpers.stats_all(real_all[p], real_region_all[p])
+        sim_stats_pop = ss_helpers.stats_all(sim_all[p], sim_region_all[p])
+        real_stats_lst.append(real_stats_pop)
+        sim_stats_lst.append(sim_stats_pop)
 
     # Fst over all pairs
     real_fst_lst = []
@@ -123,8 +130,10 @@ def main():
     for pi in range(len(first_pop)):
         a = first_pop[pi]
         b = second_pop[pi]
-        real_ab = np.concatenate((np.array(real_all[a]), np.array(real_all[b])), axis=1)
-        sim_ab = np.concatenate((np.array(sim_all[a]), np.array(sim_all[b])), axis=1)
+        real_ab = np.concatenate((np.array(real_all[a]), np.array(real_all[b])),
+            axis=1)
+        sim_ab = np.concatenate((np.array(sim_all[a]), np.array(sim_all[b])),
+            axis=1)
 
         # compute Fst
         real_fst = ss_helpers.fst_all(real_ab)
@@ -133,7 +142,7 @@ def main():
         sim_fst_lst.append(sim_fst)
 
     # finall plotting call
-    plot_stats_all(nrows, ncols, size, real_tuple_lst, sim_tuple_lst,
+    plot_stats_all(nrows, ncols, size, real_stats_lst, sim_stats_lst,
         real_fst_lst, sim_fst_lst, output_file)
 
 def split_matrices(real_matrices, real_matrices_region, sim_matrices,
@@ -168,9 +177,9 @@ def split_matrices(real_matrices, real_matrices_region, sim_matrices,
     return real_all, real_region_all, sim_all, sim_region_all
 
 # one, two, and three pops
-def plot_stats_all(nrows, ncols, size, real_tuple_lst, sim_tuple_lst, real_fst_lst,
-    sim_fst_lst, output):
-    num_pop = len(real_tuple_lst)
+def plot_stats_all(nrows, ncols, size, real_stats_lst, sim_stats_lst,
+    real_fst_lst, sim_fst_lst, output):
+    num_pop = len(real_stats_lst)
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=size)
 
     # labels and colors
@@ -182,13 +191,14 @@ def plot_stats_all(nrows, ncols, size, real_tuple_lst, sim_tuple_lst, real_fst_l
     # plot each population
     rows = [0, 0, 3]
     cols = [0, 2, 2]
+    single = True if num_pop == 1 else False
     for p in range(num_pop): # one/two pop won't use last indices
         real_color = colors[p]
         real_label = labels[p]
-        real_tuple = real_tuple_lst[p]
-        sim_tuple = sim_tuple_lst[p]
+        real_pop = real_stats_lst[p]
+        sim_pop = sim_stats_lst[p]
         plot_population(axes, rows[p], cols[p], real_color, real_label,
-            real_tuple, sim_color, sim_label, sim_tuple)
+            real_pop, sim_color, sim_label, sim_pop, single=single)
 
     # Fst (all pairs)
     cidx = 0
@@ -197,21 +207,26 @@ def plot_stats_all(nrows, ncols, size, real_tuple_lst, sim_tuple_lst, real_fst_l
     if num_pop == 2:
         cidx = 1
     for pi in range(len(real_fst_lst)): # pi -> pair index
-        ss_helpers.plot_fst(axes[3+pi][cidx], real_fst_lst[pi], sim_fst_lst[pi],
-            real_label=labels[first_pop[pi]]+"/"+labels[second_pop[pi]],
-            sim_label=sim_label, real_color=FST_COLOR, sim_color=sim_color)
+        pair_label = labels[first_pop[pi]] + "/" + labels[second_pop[pi]]
+        ss_helpers.plot_generic(axes[3+pi][cidx], NAMES[6], real_fst_lst[pi],
+            sim_fst_lst[pi], FST_COLOR, sim_color, pop=pair_label,
+            sim_label=sim_label)
 
     # overall legend
     if num_pop >= 2:
         for p in range(num_pop):
-            p_real = mpatches.Patch(color=colors[p], label=labels[p] + ' real data')
-            p_sim = mpatches.Patch(color=sim_color, label=labels[p] + ' sim data')
+            p_real = mpatches.Patch(color=colors[p], label=labels[p] + \
+                ' real data')
+            p_sim = mpatches.Patch(color=sim_color, label=labels[p] + \
+                ' sim data')
             if num_pop == 2:
                 axes[3][0+3*p].axis('off')
-                axes[3][0+3*p].legend(handles=[p_real, p_sim], loc=10, prop={'size': 18})
+                axes[3][0+3*p].legend(handles=[p_real, p_sim], loc=10,
+                    prop={'size': 18})
             if num_pop == 3:
                 axes[3+p][1].axis('off')
-                axes[3+p][1].legend(handles=[p_real, p_sim], loc=10, prop={'size': 18})
+                axes[3+p][1].legend(handles=[p_real, p_sim], loc=10,
+                    prop={'size': 18})
 
     if num_pop == 2:
         axes[3][2].axis('off')
@@ -223,23 +238,15 @@ def plot_stats_all(nrows, ncols, size, real_tuple_lst, sim_tuple_lst, real_fst_l
         plt.show()
 
 def plot_population(axes, i, j, real_color, real_label, real_tuple, sim_color,
-    sim_label, sim_tuple):
+    sim_label, sim_tuple, single=False):
     """
-    Plot all stats for a single population, starting from the (i,j) subplot.
+    Plot all 6 stats for a single population, starting from the (i,j) subplot.
     """
-
-    # TODO make all plot_generic and run a loop (Fst too)
-    ss_helpers.plot_sfs(axes[i][j], real_tuple[0], sim_tuple[0], real_color,
-        sim_color, pop=real_label, sim_label=sim_label)
-    ss_helpers.plot_dist(axes[i][j+1], real_tuple[1], sim_tuple[1], real_color,
-        sim_color, pop=real_label, sim_label=sim_label)
-    ss_helpers.plot_ld(axes[i+1][j], real_tuple[2], sim_tuple[2], real_color, sim_color,
-        pop=real_label, sim_label=sim_label)
-    ss_helpers.plot_generic(axes[i+1][j+1], NAMES[0], real_tuple[3][0], sim_tuple[3][0],
-        real_color, sim_color, pop=real_label, sim_label=sim_label)
-    ss_helpers.plot_generic(axes[i+2][j], NAMES[1], real_tuple[3][1], sim_tuple[3][1],
-        real_color, sim_color, pop=real_label, sim_label=sim_label)
-    ss_helpers.plot_generic(axes[i+2][j+1], NAMES[2], real_tuple[3][2], sim_tuple[3][2],
-        real_color, sim_color, pop=real_label, sim_label=sim_label)
+    for r in range(3):
+        for c in range(2):
+            idx = 2*r+c
+            ss_helpers.plot_generic(axes[i+r][j+c], NAMES[idx], real_tuple[idx],
+                sim_tuple[idx], real_color, sim_color, pop=real_label,
+                sim_label=sim_label, single=single)
 
 main()

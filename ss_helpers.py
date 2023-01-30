@@ -204,104 +204,60 @@ def compute_fst(raw):
 # PLOTTING FUNCTIONS
 ################################################################################
 
-def plot_sfs(ax, real_sfs, sim_sfs, real_color, sim_color, pop="", sim_label="",
-    single=False):
-    """Plot first 10 entries of the SFS"""
-    # average over regions
-    num_sfs = len(real_sfs)
-    real = [sum(rs)/num_sfs for rs in real_sfs]
-    sim = [sum(ss)/num_sfs for ss in sim_sfs]
-
-    # plotting
-    ax.bar([x-0.3 for x in range(num_sfs)], real, label=pop, width=0.4,
-        color=real_color)
-    ax.bar(range(num_sfs), sim, label=sim_label, width=0.4, color=sim_color)
-    ax.set_xlim(-1,len(real_sfs))
-    ax.set_xlabel("minor allele count (SFS)")
-    ax.set_ylabel("frequency per region")
-
-    # legend
-    if single:
-        ax.legend()
-    else:
-        ax.text(.85, .85, pop, horizontalalignment='center',
-            transform=ax.transAxes, fontsize=18)
-
-def plot_dist(ax, real_dist, sim_dist, real_color, sim_color, pop="",
-    sim_label="", single=False):
-    """Plot inter-SNP distances, measure of SNP density"""
-    # TODO remove all distplot and roll this into plot_generic
-
-    # plotting
-    sns.distplot(real_dist, ax=ax, label=pop, color=real_color)
-    sns.distplot(sim_dist, ax=ax, label=sim_label, color=sim_color)
-    ax.set(xlabel="inter-SNP distances")
-    ax.set_xlim(-50,1250)
-
-    # legend
-    if single:
-        ax.legend()
-    else:
-        ax.text(.85, .85, pop, horizontalalignment='center',
-            transform=ax.transAxes, fontsize=18)
-
-def plot_ld(ax, real_ld, sim_ld, real_color, sim_color, pop="", sim_label="",
-    single=False):
-    """Plot LD distribution as a function of distance between SNPs"""
-
-    nbin = NUM_LD
-    max_dist = 20000
-    dist_bins = np.linspace(0,max_dist,nbin)
-    real_mean = [np.mean(rs) for rs in real_ld]
-    sim_mean = [np.mean(ss) for ss in sim_ld]
-    real_stddev = [np.std(rs) for rs in real_ld]
-    sim_stddev = [np.std(ss) for ss in sim_ld]
-
-    # plotting
-    ax.errorbar(dist_bins, real_mean, yerr=real_stddev, color=real_color,
-        label=pop)
-    ax.errorbar([x+150 for x in dist_bins], sim_mean, yerr=sim_stddev,
-        color=sim_color, label=sim_label)
-    ax.set_xlabel("distance between SNPs")
-    ax.set_ylabel(r'LD ($r^2$)')
-
-    # legend
-    if single:
-        ax.legend()
-    else:
-        ax.text(.85, .85, pop, horizontalalignment='center',
-            transform=ax.transAxes, fontsize=18)
-
 def plot_generic(ax, name, real, sim, real_color, sim_color, pop="",
     sim_label="", single=False):
-    """Plot a generic stat like Taj D, pi, num haps"""
+    """Plot a generic statistic."""
 
-    # plotting
-    if name == "number of haplotypes": # use histplot to avoid binning issues
-        sns.histplot(real, ax=ax, color=real_color, label=pop, binwidth=1,
-            kde=True, stat="density", edgecolor=None)
-        sns.histplot(sim, ax=ax, color=sim_color, label=sim_label, binwidth=1,
-            kde=True, stat="density", edgecolor=None)
-        ax.set_xlim(0,100)
+    # SFS
+    if name == "minor allele count (SFS)":
+        # average over regions
+        num_sfs = len(real)
+        real_sfs = [sum(rs)/num_sfs for rs in real]
+        sim_sfs = [sum(ss)/num_sfs for ss in sim]
+
+        # plotting (0.3 for offset)
+        ax.bar([x-0.3 for x in range(num_sfs)], real_sfs, label=pop, width=0.4,
+            color=real_color)
+        ax.bar(range(num_sfs), sim_sfs, label=sim_label, width=0.4,
+            color=sim_color)
+        ax.set_xlim(-1,len(real_sfs))
+        ax.set_ylabel("frequency per region")
+
+    # LD
+    elif name == "distance between SNPs":
+        nbin = NUM_LD
+        max_dist = 20000
+        dist_bins = np.linspace(0,max_dist,nbin)
+        real_mean = [np.mean(rs) for rs in real]
+        sim_mean = [np.mean(ss) for ss in sim]
+        real_stddev = [np.std(rs) for rs in real]
+        sim_stddev = [np.std(ss) for ss in sim]
+
+        # plotting
+        ax.errorbar(dist_bins, real_mean, yerr=real_stddev, color=real_color,
+            label=pop)
+        ax.errorbar([x+150 for x in dist_bins], sim_mean, yerr=sim_stddev,
+            color=sim_color, label=sim_label)
+        ax.set_ylabel(r'LD ($r^2$)')
+
+    # all other stats
     else:
-        sns.distplot(real, ax=ax, color=real_color, label=pop)
-        sns.distplot(sim, ax=ax, color=sim_color, label=sim_label)
+        sns.histplot(real, ax=ax, color=real_color, label=pop, kde=True,
+            stat="density", edgecolor=None)
+        sns.histplot(sim, ax=ax, color=sim_color, label=sim_label, kde=True,
+            stat="density", edgecolor=None)
+
+    # inter-SNP distances
+    if name == "inter-SNP distances":
+        ax.set_xlim(-50,1250)
     ax.set(xlabel=name)
 
     # legend
-    if single:
+    if single or name == "Hudson's Fst":
         ax.legend()
     else:
         ax.text(.85, .85, pop, horizontalalignment='center',
             transform=ax.transAxes, fontsize=18)
-
-def plot_fst(ax, real_fst, sim_fst, real_label, sim_label, real_color,
-    sim_color):
-    """Plot Fst"""
-    sns.distplot(real_fst, ax=ax, label=real_label, color=real_color)
-    sns.distplot(sim_fst, ax=ax, label=sim_label, color=sim_color)
-    ax.set(xlabel="Hudson's Fst")
-    ax.legend()
 
 ################################################################################
 # COLLECT STATISTICS
@@ -363,7 +319,7 @@ def stats_all(matrices, matrices_region):
         for s in range(len(stats)):
             pop_stats[s].append(stats[s])
 
-    return pop_sfs, pop_dist, pop_ld, pop_stats
+    return [pop_sfs, pop_dist, pop_ld] + pop_stats
 
 def fst_all(matrices):
     """Fst for all regions"""

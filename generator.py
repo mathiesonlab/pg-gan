@@ -86,7 +86,8 @@ class Generator:
         if self.prior == []:
             return params.reco.value
 
-        return draw_background_rate_from_prior(self.prior, self.weights, self.rng)
+        return draw_background_rate_from_prior(self.prior, self.weights,
+            self.rng)
 
 def draw_background_rate_from_prior(prior_rates, prob, rng):
     return rng.choice(prior_rates, p=prob)
