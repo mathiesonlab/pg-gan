@@ -145,7 +145,7 @@ def main():
 
     # finall plotting call
     plot_stats_all(nrows, ncols, size, real_stats_lst, sim_stats_lst,
-                   real_fst_lst, sim_fst_lst, output_file, title_data)
+        real_fst_lst, sim_fst_lst, output_file, title_data)
 
 def split_matrices(real_matrices, real_matrices_region, sim_matrices,
     sim_matrices_region, sample_sizes):
