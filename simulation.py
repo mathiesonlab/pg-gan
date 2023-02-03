@@ -15,7 +15,6 @@ import sps.HomSap
 
 # our imports
 import global_vars
-import util
 
 ################################################################################
 # SIMULATION

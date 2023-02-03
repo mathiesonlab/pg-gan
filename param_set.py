@@ -7,6 +7,7 @@ Date: 9/27/22
 # python imports
 import numpy as np
 from scipy.stats import norm
+import sys
 
 class Parameter:
     """

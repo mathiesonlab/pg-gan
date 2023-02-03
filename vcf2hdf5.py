@@ -6,7 +6,6 @@ Date: 2/4/21
 """
 
 import allel
-import numpy as np
 import optparse
 import sys
 
