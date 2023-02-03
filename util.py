@@ -188,6 +188,10 @@ def parse_args(in_file_data = None, param_values = None):
             param_mismatch("RECO_FOLDER", in_file_data['reco_folder'],
                 opts.reco_folder)
 
+        # because we care about the seed from the trial, here in_file_data takes over opts
+        if in_file_data['seed'] is not None:
+            opts.seed = in_file_data['seed']
+            
     if opts.param_values is not None:
         arg_values = [float(val_str) for val_str in
             opts.param_values.split(',')]

@@ -54,6 +54,8 @@ def main():
     generator, iterator, parameters, sample_sizes = util.process_opts(opts,
         summary_stats=True)
 
+    title_data = get_title_from_trial_data(opts, param_values, generator.sample_sizes)
+    
     pop_names = opts.data_h5.split("/")[-1].split(".")[0] \
                        if opts.data_h5 is not None else ""
     # sets global_vars.SS_LABELS and global_vars.SS_COLORS
@@ -143,7 +145,7 @@ def main():
 
     # finall plotting call
     plot_stats_all(nrows, ncols, size, real_stats_lst, sim_stats_lst,
-        real_fst_lst, sim_fst_lst, output_file)
+                   real_fst_lst, sim_fst_lst, output_file, title_data)
 
 def split_matrices(real_matrices, real_matrices_region, sim_matrices,
     sim_matrices_region, sample_sizes):
@@ -178,10 +180,12 @@ def split_matrices(real_matrices, real_matrices_region, sim_matrices,
 
 # one, two, and three pops
 def plot_stats_all(nrows, ncols, size, real_stats_lst, sim_stats_lst,
-    real_fst_lst, sim_fst_lst, output):
+    real_fst_lst, sim_fst_lst, output, title_data):
     num_pop = len(real_stats_lst)
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=size)
 
+    fig.suptitle(title_data["title"], fontsize=title_data["size"])
+    
     # labels and colors
     labels = global_vars.SS_LABELS[:num_pop]
     sim_label = global_vars.SS_LABELS[-1]
@@ -232,6 +236,7 @@ def plot_stats_all(nrows, ncols, size, real_stats_lst, sim_stats_lst,
         axes[3][2].axis('off')
 
     plt.tight_layout()
+
     if output != None:
         plt.savefig(output, dpi=350)
     else:
@@ -248,5 +253,61 @@ def plot_population(axes, i, j, real_color, real_label, real_tuple, sim_color,
             ss_helpers.plot_generic(axes[i+r][j+c], NAMES[idx], real_tuple[idx],
                 sim_tuple[idx], real_color, sim_color, pop=real_label,
                 sim_label=sim_label, single=single)
+
+# only called once per summary_stats call
+def get_title_from_trial_data(opts, param_values, sample_sizes):
+    num_pops = len(sample_sizes)
+    if num_pops == 1:
+        FONT_SIZE = 8
+        CHAR_LIMIT = 90
+    else:
+        FONT_SIZE = 12
+        CHAR_LIMIT = 130
+    
+    def fix_value_length(prefix, value):
+        value = prefix + str(value)
+        len_value = len(prefix + value)
+
+        if len_value <= CHAR_LIMIT:
+            return str(value)
+        
+        num_split = len_value // CHAR_LIMIT + 1
+        index_width = len(value)// num_split # should work for strs or lists
+
+        if len(value) / num_split == 0:
+            index_width = index_width-1 # account for rounding down
+                
+        from_index = 0
+        to_index = index_width
+
+        values_fixed = ""
+        for n in range(num_split):
+            values_fixed = values_fixed + str(value[from_index:to_index]) + "\n"
+            from_index = from_index + index_width
+            to_index = to_index + index_width
+            
+        # no "/n" on the last one
+        values_fixed = values_fixed + str(value[from_index:to_index])
+    
+        return values_fixed
+
+    params_using = param_values if opts.param_values is None else opts.param_values
+
+    if opts.data_h5 is None and opts.bed is None and opts.reco_folder is None:
+        s_source = "data_h5: None, bed: None, reco: None,\n"
+    else:
+        s_source = "data_h5: "+str(opts.data_h5)+",\nbed: "+opts.bed+\
+                   ",\nreco: "+opts.reco_folder+",\n"
+    
+    s_model = "model: " + opts.model + ", "
+    s_ss = "sample_sizes: " + str(sample_sizes) + ", "
+    s_seed = "seed: " + str(opts.seed) + ", "
+    s_num_trial = "SSTATS_TRIALS: " + str(NUM_TRIAL) + ", "
+    s_params = "params: " + opts.params + ", "
+    s_param_values = fix_value_length("param_values: ", params_using) # last value, no comma
+    
+    title = s_num_trial + s_model + s_ss + s_seed + "\n" + s_params + "\n" + s_source + s_param_values
+        
+    return {"size": FONT_SIZE, "title": title}
 
 main()
