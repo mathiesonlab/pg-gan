@@ -19,7 +19,7 @@ import ss_helpers
 import util
 
 # globals
-NUM_TRIAL = 5000
+NUM_TRIAL = 100
 # statistic names
 NAMES = [
     "minor allele count (SFS)",
@@ -266,7 +266,7 @@ def get_title_from_trial_data(opts, param_values, sample_sizes):
     
     def fix_value_length(prefix, value):
         value = prefix + str(value)
-        len_value = len(prefix + value)
+        len_value = len(value)
 
         if len_value <= CHAR_LIMIT:
             return str(value)
@@ -274,14 +274,11 @@ def get_title_from_trial_data(opts, param_values, sample_sizes):
         num_split = len_value // CHAR_LIMIT + 1
         index_width = len(value)// num_split # should work for strs or lists
 
-        if len(value) / num_split == 0:
-            index_width = index_width-1 # account for rounding down
-                
         from_index = 0
         to_index = index_width
 
         values_fixed = ""
-        for n in range(num_split):
+        for n in range(num_split - 1):
             values_fixed = values_fixed + str(value[from_index:to_index]) + "\n"
             from_index = from_index + index_width
             to_index = to_index + index_width
@@ -294,20 +291,21 @@ def get_title_from_trial_data(opts, param_values, sample_sizes):
     params_using = param_values if opts.param_values is None else opts.param_values
 
     if opts.data_h5 is None and opts.bed is None and opts.reco_folder is None:
-        s_source = "data_h5: None, bed: None, reco: None,\n"
+        s_source = "data_h5: None, bed: None, reco: None"
     else:
         s_source = "data_h5: "+str(opts.data_h5)+",\nbed: "+opts.bed+\
-                   ",\nreco: "+opts.reco_folder+",\n"
+                   ",\nreco: "+opts.reco_folder
     
     s_model = "model: " + opts.model + ", "
     s_ss = "sample_sizes: " + str(sample_sizes) + ", "
     s_seed = "seed: " + str(opts.seed) + ", "
     s_num_trial = "SSTATS_TRIALS: " + str(NUM_TRIAL) + ", "
     s_params = "params: " + opts.params + ", "
-    s_param_values = fix_value_length("param_values: ", params_using) # last value, no comma
+    s_param_values = fix_value_length("param_values: ", params_using)+","
     
-    title = s_num_trial + s_model + s_ss + s_seed + "\n" + s_params + "\n" + s_source + s_param_values
-        
+    title = s_num_trial + s_model + s_ss + s_seed + "\n" + s_params + "\n" +\
+        s_param_values + "\n" + s_source + "\n"
+
     return {"size": FONT_SIZE, "title": title}
 
 main()
