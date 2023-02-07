@@ -19,7 +19,7 @@ import ss_helpers
 import util
 
 # globals
-NUM_TRIAL = 100
+NUM_TRIAL = 5000
 # statistic names
 NAMES = [
     "minor allele count (SFS)",
@@ -54,7 +54,8 @@ def main():
     generator, iterator, parameters, sample_sizes = util.process_opts(opts,
         summary_stats=True)
 
-    title_data = get_title_from_trial_data(opts, param_values, generator.sample_sizes)
+    title_data = get_title_from_trial_data(opts, param_values,
+        generator.sample_sizes) if global_vars.SS_SHOW_TITLE else None
     
     pop_names = opts.data_h5.split("/")[-1].split(".")[0] \
                        if opts.data_h5 is not None else ""
@@ -180,11 +181,12 @@ def split_matrices(real_matrices, real_matrices_region, sim_matrices,
 
 # one, two, and three pops
 def plot_stats_all(nrows, ncols, size, real_stats_lst, sim_stats_lst,
-    real_fst_lst, sim_fst_lst, output, title_data):
+    real_fst_lst, sim_fst_lst, output, title_data=None):
     num_pop = len(real_stats_lst)
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=size)
 
-    fig.suptitle(title_data["title"], fontsize=title_data["size"])
+    if title_data is not None:
+        fig.suptitle(title_data["title"], fontsize=title_data["size"])
     
     # labels and colors
     labels = global_vars.SS_LABELS[:num_pop]
@@ -263,7 +265,8 @@ def get_title_from_trial_data(opts, param_values, sample_sizes):
     else:
         FONT_SIZE = 12
         CHAR_LIMIT = 130
-    
+
+    # helper functions ------------------------------------------------------
     def fix_value_length(prefix, value):
         value = prefix + str(value)
         len_value = len(value)
@@ -288,8 +291,20 @@ def get_title_from_trial_data(opts, param_values, sample_sizes):
     
         return values_fixed
 
-    params_using = param_values if opts.param_values is None else opts.param_values
+    def round_params(param_list):
+        # cast to floats        
+        for i in range(len(param_list)):
+            if abs(float(param_list[i])) < 1.0:
+                param_list[i] = round(param_list[i], 6)
+            else:
+                param_list[i] = int(param_list[i])
 
+        return param_list
+    # -----------------------------------------------------------
+    
+    params_using = param_values.copy() if opts.param_values is None else opts.param_values.copy()
+    params_using = round_params(params_using)
+    
     if opts.data_h5 is None and opts.bed is None and opts.reco_folder is None:
         s_source = "data_h5: None, bed: None, reco: None"
     else:
