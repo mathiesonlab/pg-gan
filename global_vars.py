@@ -32,13 +32,27 @@ Override by commenting out the function body,
 and adding in your definitions. Leave the assert
 at the end.
 '''
-def update_ss_labels(pop_names):
+def update_ss_labels(pop_names, num_pops = 1):
     # SS_LABELS is a list of string labels, ex ["CEU", "YRI", "CHB", "simulation"]
     # or ["msprime", "SLiM"]
-    if pop_names == '':
-        pop_names = 'msprime'
+    if pop_names == "":
+        if num_pops == 1:
+            pop_labels = ["msprime"]
+        else: # works for up to 7 populations
+            pop_labels = [None  for i in range(num_pops)]
+            ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVQXYZ"
+            ALT_COLORS = ["red", "blue", "darkorange", "green",
+                          "purple", "pink", "navy"]
 
-    SS_LABELS.extend(pop_names.split("_"))
+            for i in range(num_pops):
+                name = "POP_"+ALPHABET[i]
+                pop_labels[i] = name
+                COLOR_DICT[name] = ALT_COLORS[i]
+
+    else:
+        pop_labels = pop_names.split("_")
+
+    SS_LABELS.extend(pop_labels)
     SS_LABELS.append("simulation")
 
     # colors for plotting, ex ["blue", "darkorange", "green", "gray"] (last is traditionally gray)
