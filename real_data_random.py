@@ -68,7 +68,7 @@ class Region:
         # add on last if inside
         if end_inside:
             part_inside += (self.end_pos - mask_lst[region_end_idx][0])
-        elif self.end_pos <= mask_lst[region_start_idx][0]:
+        elif self.end_pos <= mask_lst[region_end_idx][0]:
             # end before closest region, don't add anything
             pass
         else:
