@@ -35,10 +35,15 @@ def add_to_lst(total_lst, mini_lst):
 def parse_output(filename, return_acc=False):
     """Parse pg-gan output to find the inferred parameters"""
 
-    def clean_param_tkn(str):
-        if str == 'None,':
+    def clean_param_tkn(s):
+        if s == 'None,':
             return None # this is a common result (not an edge case)
-        return str[1:-2]
+
+        if s[:-1].isnumeric(): # probably the seed
+            # no need to remove quotation marks, just comma
+            return int(s[:-1]) # only used as a label, so ok to leave as str
+
+        return s[1:-2]
 
     f = open(filename,'r')
 
@@ -71,7 +76,8 @@ def parse_output(filename, return_acc=False):
             trial_data['data_h5'] = clean_param_tkn(tokens[5])
             trial_data['bed_file'] = clean_param_tkn(tokens[7])
             trial_data['reco_folder'] = clean_param_tkn(tokens[9])
-
+            trial_data['seed'] = clean_param_tkn(tokens[15])
+            
         elif "Epoch 100" in line:
             tokens = line.split()
             disc_loss = float(tokens[3][:-1])
@@ -256,7 +262,12 @@ def plot_generic(ax, name, real, sim, real_color, sim_color, pop="",
     if single or name == "Hudson's Fst":
         ax.legend()
     else:
-        ax.text(.85, .85, pop, horizontalalignment='center',
+        if len(pop) > 3:
+            x_spacing = 0.83
+        else:
+            x_spacing = 0.85
+
+        ax.text(x_spacing, 0.85, pop, horizontalalignment='center',
             transform=ax.transAxes, fontsize=18)
 
 ################################################################################
