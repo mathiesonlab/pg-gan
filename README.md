@@ -56,11 +56,11 @@ Note that all output is printed to stdout, including current parameter estimates
 can then be read in by the summary statistic visualization program.
 
 1. Toy example with simulated training data. `-m im` means use the IM model (isolation-with-migration) and
-`-p` is used to specify the parameters to infer (six here). `-t` is the "toy" flag, which will run the method without discriminator
+`-p` is used to specify the parameters to infer (six here). `-n 20,20` means 20 haplotypes in each population. `-t` is the "toy" flag, which will run the method without discriminator
 pre-training and then for two iterations only. It should take about 5 min with a GPU.
 
 ~~~
-python3 pg_gan.py -m im -p N1,N2,N_anc,T_split,reco,mig -t
+python3 pg_gan.py -m im -p N1,N2,N_anc,T_split,reco,mig -n 20,20 -t
 ~~~
 
   The last two lines of the output contain:
@@ -71,11 +71,11 @@ python3 pg_gan.py -m im -p N1,N2,N_anc,T_split,reco,mig -t
   * A list of all generator loss values throughout training. In this case I obtained [6.124907, 4.915148, 2.7859032] (loss at the beginning as well as the loss after the two iterations). This is good since the
   loss is decreasing as the generator starts to move toward more realistic parameters (although two iterations will not get very far).
 
-2. Same example above but without the "toy" flag. This will take several hours to run (likely 5-6 with a GPU, more
+2. Same example above but without the "toy" flag and with more samples per population. This will take several hours to run (likely 5-6 with a GPU, more
     without one).
 
 ~~~
-python3 pg_gan.py -m im -p N1,N2,N_anc,T_split,reco,mig
+python3 pg_gan.py -m im -p N1,N2,N_anc,T_split,reco,mig -n 100,100
 ~~~
 
 ## Real training data
@@ -108,7 +108,7 @@ python3 vcf2hdf5.py -i CHB.phase3_shapeit2_mvncall_integrated_v5a.20130502.genot
 6. Finally, run `pg-gan` on the data using (for example) a 5-parameter exponential growth model.
 
 ~~~
-python3 pg_gan.py -m exp -p N1,N2,growth,T1,T2 -d CHB.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.h5 -b 20120824_strict_mask.bed
+python3 pg_gan.py -m exp -p N1,N2,growth,T1,T2 -n 198 -d CHB.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.h5 -b 20120824_strict_mask.bed
 ~~~
 
 Use `-r` (optional) to specify a folder with recombination map files for each chromosome (for example `-r genetic_map/`). This will cause the generator to sample from this recombination rate distribution when creating simulated data. See the start of file `genetic_map_GRCh37_chr1.txt` below for the

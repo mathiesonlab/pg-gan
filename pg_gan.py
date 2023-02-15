@@ -296,7 +296,7 @@ class PG_GAN:
 def get_discriminator(sample_sizes):
     num_pops = len(sample_sizes)
     if num_pops == 1:
-        return discriminator.OnePopModel()
+        return discriminator.OnePopModel(sample_sizes[0])
     if num_pops == 2:
         return discriminator.TwoPopModel(sample_sizes[0], sample_sizes[1])
     # else

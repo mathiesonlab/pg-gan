@@ -20,7 +20,7 @@ import global_vars
 # SIMULATION
 ################################################################################
 
-def simulate_im(params, sample_sizes, seed, reco):
+def im(params, sample_sizes, seed, reco):
     """Note this is a 2 population model"""
     assert len(sample_sizes) == 2
 
@@ -71,7 +71,7 @@ def simulate_im(params, sample_sizes, seed, reco):
 
     return ts
 
-def simulate_ooa2(params, sample_sizes,seed, reco):
+def ooa2(params, sample_sizes,seed, reco):
     """Note this is a 2 population model"""
     assert len(sample_sizes) == 2
 
@@ -119,7 +119,7 @@ def simulate_ooa2(params, sample_sizes,seed, reco):
 
     return ts
 
-def simulate_postOOA(params, sample_sizes, seed, reco):
+def post_ooa(params, sample_sizes, seed, reco):
     """Note this is a 2 population model for CEU/CHB split"""
     assert len(sample_sizes) == 2
 
@@ -175,7 +175,7 @@ def simulate_postOOA(params, sample_sizes, seed, reco):
 
     return ts
 
-def simulate_exp(params, sample_sizes, seed, reco):
+def exp(params, sample_sizes, seed, reco):
     """Note this is a 1 population model"""
     assert len(sample_sizes) == 1
 
@@ -202,7 +202,7 @@ def simulate_exp(params, sample_sizes, seed, reco):
 
     return ts
 
-def simulate_const(params, sample_sizes, seed, reco):
+def const(params, sample_sizes, seed, reco):
     assert len(sample_sizes) == 1
 
     # simulate data
@@ -212,7 +212,7 @@ def simulate_const(params, sample_sizes, seed, reco):
 
     return ts
 
-def simulate_ooa3(params, sample_sizes, seed, reco):
+def ooa3(params, sample_sizes, seed, reco):
     """From OOA3 as implemented in stdpopsim"""
     assert len(sample_sizes) == 3
 
@@ -242,6 +242,6 @@ def simulate_ooa3(params, sample_sizes, seed, reco):
     samples = model.get_samples(sample_sizes[0], sample_sizes[1],
         sample_sizes[2]) #['YRI', 'CEU', 'CHB']
     engine = sps.engines.get_engine('msprime')
-    ts = engine.simulate(model, contig, samples)
+    ts = engine.simulate(model, contig, samples, seed=seed)
 
     return ts

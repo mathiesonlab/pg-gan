@@ -29,8 +29,6 @@ class Generator:
         self.rng = default_rng(seed)
         self.curr_params = None
 
-        self.pretraining = False
-
         # for real data, use HapMap
         if mirror_real and reco_folder != None:
             files = global_vars.get_reco_files(reco_folder)
@@ -51,7 +49,7 @@ class Generator:
                 global_vars.NUM_SNPS, 2), dtype=np.float32) # two channels
 
         # set up parameters
-        sim_params = param_set.ParamSet()
+        sim_params = param_set.ParamSet(self.simulator)
         if real:
             pass # keep orig for "fake" real
         elif params == []:

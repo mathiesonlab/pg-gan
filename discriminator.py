@@ -14,7 +14,7 @@ from tensorflow.keras import Model
 class OnePopModel(Model):
     """Single population model - based on defiNETti software."""
 
-    def __init__(self):
+    def __init__(self, pop):
         super(OnePopModel, self).__init__()
 
         # it is (1,5) for permutation invariance (shape is n X SNPs)
@@ -29,8 +29,11 @@ class OnePopModel(Model):
         self.fc2 = Dense(128, activation='relu')
         self.dense3 = Dense(1)#2, activation='softmax') # two classes
 
+        self.pop = pop
+
     def call(self, x, training=None):
         """x is the genotype matrix, dist is the SNP distances"""
+        assert x.shape[1] == self.pop
         x = self.conv1(x)
         x = self.pool(x) # pool
         x = self.conv2(x)
@@ -84,6 +87,7 @@ class TwoPopModel(Model):
 
     def call(self, x, training=None):
         """x is the genotype matrix, dist is the SNP distances"""
+        assert x.shape[1] == self.pop1 + self.pop2
 
         # first divide into populations
         x_pop1 = x[:, :self.pop1, :, :]
@@ -158,6 +162,7 @@ class ThreePopModel(Model):
 
     def call(self, x, training=None):
         """x is the genotype matrix, dist is the SNP distances"""
+        assert x.shape[1] == self.pop1 + self.pop2 + self.pop3
 
         # first divide into populations
         x_pop1 = x[:, :self.pop1, :, :]
