@@ -205,7 +205,7 @@ def parse_args(in_file_data = None, param_values = None):
             param_mismatch("PARAM_VALUES", param_values, arg_values)
             param_values = arg_values # override at return
 
-    mandatories = ['model','params']
+    mandatories = ['model','params','sample_sizes']
     for m in mandatories:
         if not opts.__dict__[m]:
             print('mandatory option ' + m + ' is missing\n')
