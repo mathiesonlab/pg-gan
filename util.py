@@ -205,7 +205,7 @@ def parse_args(in_file_data = None, param_values = None):
             param_mismatch("PARAM_VALUES", param_values, arg_values)
             param_values = arg_values # override at return
 
-    mandatories = ['model','params']
+    mandatories = ['model','params','sample_sizes']
     for m in mandatories:
         if not opts.__dict__[m]:
             print('mandatory option ' + m + ' is missing\n')
@@ -294,8 +294,9 @@ def process_opts(opts, summary_stats = False):
         #         globals.FRAC_TEST)
         # else:
         # most typical case for real data
-        iterator = real_data_random.RealDataRandomIterator(opts.data_h5,
-            opts.bed)
+        iterator = real_data_random.RealDataRandomIterator(filename=opts.data_h5,
+                                                           seed=opts.seed,
+                                                           bed_file=opts.bed)
 
     # more flexible way to get the simulator
     simulator = getattr(simulation, opts.model)
