@@ -20,10 +20,10 @@ import util
 class Region:
 
     def __init__(self, chrom, start_pos, end_pos):
-        self.chrom = chrom
-        self.start_pos = start_pos
-        self.end_pos = end_pos
-        self.region_len = end_pos - start_pos # L
+        self.chrom = str(chrom)
+        self.start_pos = int(start_pos)
+        self.end_pos = int(end_pos)
+        self.region_len = self.end_pos - self.start_pos # L
 
     def __str__(self):
         s = str(self.chrom) + ":" + str(self.start_pos) + "-" +str(self.end_pos)
