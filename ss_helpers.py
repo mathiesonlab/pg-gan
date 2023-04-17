@@ -77,6 +77,7 @@ def parse_output(filename, return_acc=False):
             trial_data['bed_file'] = clean_param_tkn(tokens[7])
             trial_data['reco_folder'] = clean_param_tkn(tokens[9])
             trial_data['seed'] = clean_param_tkn(tokens[15])
+            trial_data['sample_sizes'] = clean_param_tkn(tokens[17])
             
         elif "Epoch 100" in line:
             tokens = line.split()
