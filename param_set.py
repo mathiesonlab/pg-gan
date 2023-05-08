@@ -158,9 +158,10 @@ class ParamSet:
         else:
             param_range = self.iterable_params
 
+        result = "["
         for param_name in param_range:
             param = self.param_set[param_name]
-            result = str(param.value) + ","        
+            result = result + str(param.value) + ","        
 
         result = result[:-1] + "]" # remove extra comma
 
