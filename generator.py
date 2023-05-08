@@ -107,13 +107,14 @@ def prep_region(ts, neg1, region_len):
 if __name__ == "__main__":
 
     batch_size = 50
-    simulator = simulation.simulate_exp
-    params = get_param_set(simulator)
+    simulator = simulation.exp
+    param_names = ["N1", "T1"]
+    params = ParamSet(simulator, param_names)
 
     # quick test
     print("sim exp")
-    generator = Generator(simulator, ["N1", "T1"], [20],
+    generator = Generator(simulator, params, [20],
                           global_vars.DEFAULT_SEED)
-    generator.update_params([params["N1"].value, params["T1"].value])
+    generator.update_params(params)
     mini_batch = generator.simulate_batch(batch_size=batch_size)
     print("x", mini_batch.shape)

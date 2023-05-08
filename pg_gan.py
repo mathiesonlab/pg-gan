@@ -78,11 +78,12 @@ def simulated_annealing(generator, disc, iterator, iterable_params, seed,
     else:
         pg_gan.disc_pretraining(1) # for testing purposes
         s_current = iterable_params.clone(start=True)
-
+        pg_gan.generator.update_params(s_current)
+        
     loss_curr = pg_gan.generator_loss(s_current)
     print("params, loss", s_current, loss_curr)
 
-    posterior = [s_current]
+    posterior = [s_current.to_list()]
     loss_lst = [loss_curr]
     real_acc_lst = []
     fake_acc_lst = []
@@ -145,7 +146,7 @@ def simulated_annealing(generator, disc, iterator, iterable_params, seed,
 
         print("T, p_accept, rand, s_current, loss_curr", end=" ")
         print(T, p_accept, rand, s_current, loss_curr)
-        posterior.append(s_current)
+        posterior.append(s_current.to_list())
         loss_lst.append(loss_curr)
 
     return posterior, loss_lst

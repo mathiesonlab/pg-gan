@@ -152,20 +152,20 @@ class ParamSet:
         self.param_set = params
         self.simulator = simulator
 
-    def __str__(self):            
+    def to_list(self):
         if self.iterable_params == []:
             param_range = self.param_set.keys()
         else:
             param_range = self.iterable_params
 
-        result = "["
+        result = []
         for param_name in param_range:
             param = self.param_set[param_name]
-            result = result + str(param.value) + ","        
-
-        result = result[:-1] + "]" # remove extra comma
-
+            result.append(param.value)
         return result
+        
+    def __str__(self):      
+        return str(self.to_list())
 
     def clone(self, start=False):
         # make the object but reset it
