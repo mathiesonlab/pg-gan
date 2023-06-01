@@ -152,11 +152,12 @@ def parse_args(in_file_data = None, param_values = None):
     '''
     The following section overrides params from the input file with the provided
     args.
+
+    note: this series of checks looks like it could be simplified with list
+          iteration:
+    it can't be, bc the opts object can't be indexed--eg opts['model'] fails
     '''
 
-    # note: this series of checks looks like it could be simplified with list
-    #       iteration:
-    # it can't be, bc the opts object can't be indexed--eg opts['model'] fails
     def param_mismatch(param, og, replacement):
         print("***** WARNING: MISMATCH BETWEEN IN FILE AND CMD ARGS: " + param +
               ", using ARGS (" + str(og) + " -> " + str(replacement) + ")")
@@ -197,7 +198,7 @@ def parse_args(in_file_data = None, param_values = None):
         # because we care about the seed from the trial, here in_file_data takes over opts
         if in_file_data['seed'] is not None:
             opts.seed = in_file_data['seed']
-            
+
     if opts.param_values is not None:
         arg_values = [float(val_str) for val_str in
             opts.param_values.split(',')]
