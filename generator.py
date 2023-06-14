@@ -79,6 +79,20 @@ class Generator:
     def update_params(self, new_params):
         self.iterable_params = new_params
 
+    def update_param_values(self, param_names, param_values):
+        if not self.iterable_params:
+            self.iterable_params = ParamSet(self.simulation)
+
+        num_params = len(param_names)
+        assert num_params == len(param_values)
+
+        for i in range(num_params):
+            param_name = param_names[i]
+
+            if param_name in self.iterable_params.param_set:
+                self.iterable_params.param_set[param_name].value\
+                    = param_values[i]
+
     def get_reco(self, reco):
         if self.prior == []:
             return reco

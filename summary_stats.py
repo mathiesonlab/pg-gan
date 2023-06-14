@@ -62,17 +62,17 @@ def main():
     # overwrite this function in globals.py to change
     global_vars.update_ss_labels(pop_names, num_pops=len(generator.sample_sizes))
 
-    generator.update_params(param_values)
+    generator.update_param_values(opts.params.split(','), param_values)
     print("VALUES", param_values)
     print("made it through params")
 
     # use the parameters we inferred!
     fsc=False
-    if opts.model == 'fsc':
-        print("\nALERT you are running FSC sim!\n")
-        print("FSC PARAMS!", FSC_PARAMS)
-        generator.update_params(FSC_PARAMS) # make sure to check the order!
-        fsc=True
+    # if opts.model == 'fsc':
+    #     print("\nALERT you are running FSC sim!\n")
+    #     print("FSC PARAMS!", FSC_PARAMS)
+    #     generator.update_params(FSC_PARAMS) # make sure to check the order!
+    #     fsc=True
 
     '''
     NOTE: for summary stats, use neg1=False to keep hap data as 0/1 (not -1/1)
