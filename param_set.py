@@ -163,21 +163,19 @@ class ParamSet:
             param = self.param_set[param_name]
             result.append(param.value)
         return result
-        
-    def __str__(self):      
+
+    def __str__(self):
         return str(self.to_list())
 
     def clone(self, start=False):
         # make the object but reset it
         new_param_set = ParamSet(self.simulator, self.iterable_params)
 
-        # only add params that we have
+        # copy over current values
         for param_name in self.param_set:
-            param = self.param_set[param_name]
-            new_param_set.param_set[param_name] = param
-
             new_param_set.param_set[param_name].value = \
-                param.start() if start else param.value
+                new_param_set.param_set[param_name].start() if start \
+                else self.get(param_name)
 
         return new_param_set
 
