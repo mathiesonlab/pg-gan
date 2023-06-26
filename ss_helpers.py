@@ -63,7 +63,7 @@ def parse_output(filename, return_acc=False):
 
         if line.startswith("{"):
             tokens = line.split()
-            # print(tokens)
+            print(tokens)
             param_str = tokens[3][1:-2]
             print("PARAMS", param_str)
             param_names = param_str.split(",")
