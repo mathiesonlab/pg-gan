@@ -108,20 +108,20 @@ def simulated_annealing(generator, disc, iterator, iterable_params, seed,
 
         for param_name in s_current_set: # trying all params!
             value = s_current_set[param_name].value
-            temp_params = s_current.clone()
+            s_params = s_current.clone()
             
             #k = random.choice(range(len(parameters))) # random param
             for j in range(10): # trying 10
 
                 # can update all the parameters at once, or choose one at a time
-                # temp_params.proposal_all(multiplier=T, value_dict=parameters.param_set)
-                temp_params.propose_param(param_name, value, T)
-                loss_proposal = pg_gan.generator_loss(temp_params)
+                # s_params.proposal_all(multiplier=T, value_dict=parameters.param_set)
+                s_params.propose_param(param_name, value, T)
+                loss_proposal = pg_gan.generator_loss(s_params)
 
-                print(j, "proposal", temp_params, loss_proposal)
+                print(j, "proposal", s_params, loss_proposal)
                 if loss_proposal < loss_best: # minimizing loss
                     loss_best = loss_proposal
-                    s_best = temp_params
+                    s_best = s_params
 
         # decide whether to accept or not (reduce accepting bad state later on)
         if loss_best <= loss_curr: # unsure about this equal here
