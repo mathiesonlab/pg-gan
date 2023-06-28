@@ -17,7 +17,7 @@ FRAC_TEST = 0.1 # depricated
 OVERWRITE_TRIAL_DATA = False
 TRIAL_DATA = { 'model': 'const', 'params': 'Ne', 'data_h5': None,
                'bed_file': None, 'reco_folder': None, 'param_values': '10000.',
-               'seed': None}
+               'seed': None, 'sample_sizes': '198'}
 
 # section C: summary stats customization----------------------------------------
 SS_SHOW_TITLE = False

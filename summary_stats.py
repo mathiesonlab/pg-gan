@@ -55,7 +55,7 @@ def main():
 
     title_data = get_title_from_trial_data(opts, param_values,
         generator.sample_sizes) if global_vars.SS_SHOW_TITLE else None
-    
+
     pop_names = opts.data_h5.split("/")[-1].split(".")[0] \
                        if opts.data_h5 is not None else ""
     # sets global_vars.SS_LABELS and global_vars.SS_COLORS
@@ -186,7 +186,7 @@ def plot_stats_all(nrows, ncols, size, real_stats_lst, sim_stats_lst,
 
     if title_data is not None:
         fig.suptitle(title_data["title"], fontsize=title_data["size"])
-    
+
     # labels and colors
     labels = global_vars.SS_LABELS[:num_pop]
     sim_label = global_vars.SS_LABELS[-1]
@@ -265,58 +265,26 @@ def get_title_from_trial_data(opts, param_values, sample_sizes):
         FONT_SIZE = 12
         CHAR_LIMIT = 130
 
-    # helper functions ------------------------------------------------------
-    def fix_value_length(prefix, value):
-        value = prefix + str(value)
-        len_value = len(value)
+    params_using = param_values.copy()
+    for i in range(len(params_using)):
+        if abs(float(params_using[i])) < 1.0:
+            params_using[i] = format(params_using[i], '.3E')
+        else:
+            params_using[i] = str(int(params_using[i]))
 
-        if len_value <= CHAR_LIMIT:
-            return str(value)
-        
-        num_split = len_value // CHAR_LIMIT + 1
-        index_width = len(value)// num_split # should work for strs or lists
-
-        from_index = 0
-        to_index = index_width
-
-        values_fixed = ""
-        for n in range(num_split - 1):
-            values_fixed = values_fixed + str(value[from_index:to_index]) + "\n"
-            from_index = from_index + index_width
-            to_index = to_index + index_width
-            
-        # no "/n" on the last one
-        values_fixed = values_fixed + str(value[from_index:to_index])
-    
-        return values_fixed
-
-    def round_params(param_list):
-        # cast to floats        
-        for i in range(len(param_list)):
-            if abs(float(param_list[i])) < 1.0:
-                param_list[i] = round(param_list[i], 6)
-            else:
-                param_list[i] = int(param_list[i])
-
-        return param_list
-    # -----------------------------------------------------------
-    
-    params_using = param_values.copy() if opts.param_values is None else opts.param_values.copy()
-    params_using = round_params(params_using)
-    
     if opts.data_h5 is None and opts.bed is None and opts.reco_folder is None:
         s_source = "data_h5: None, bed: None, reco: None"
     else:
-        s_source = "data_h5: "+str(opts.data_h5)+",\nbed: "+opts.bed+\
+        s_source = "data_h5: "+opts.data_h5+",\nbed: "+opts.bed+\
                    ",\nreco: "+opts.reco_folder
-    
+
     s_model = "model: " + opts.model + ", "
     s_ss = "sample_sizes: " + str(sample_sizes) + ", "
     s_seed = "seed: " + str(opts.seed) + ", "
     s_num_trial = "SSTATS_TRIALS: " + str(NUM_TRIAL) + ", "
     s_params = "params: " + opts.params + ", "
-    s_param_values = fix_value_length("param_values: ", params_using)+","
-    
+    s_param_values = "param_values: " + str(params_using)+","
+
     title = s_num_trial + s_model + s_ss + s_seed + "\n" + s_params + "\n" +\
         s_param_values + "\n" + s_source + "\n"
 
