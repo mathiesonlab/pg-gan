@@ -72,92 +72,129 @@ class Parameter:
 
 class ParamSet:
 
-    def __init__(self, simulator):
+    def __init__(self, simulator, iterable_params=[]):
         """Takes in a simulator to determine which params are needed"""
+
+        param_set = {}
+        param_set["reco"] = Parameter(1.25e-8, 1e-9, 1e-7, "reco")
+        param_set["mut"] = Parameter(1.25e-8, 1e-9, 1e-7, "mut")
 
         # constant population size
         if simulator == simulation.const:
-            self.Ne = Parameter(10000, 1000, 30000, "Ne")
-            self.reco = Parameter(1.25e-8, 1e-9, 1e-7, "reco")
-            self.mut = Parameter(1.25e-8, 1e-9, 1e-7, "mut")
+            param_set["Ne"] = Parameter(10000, 1000, 30000, "Ne")
 
         # exponential growth model
         elif simulator == simulation.exp:
-            self.N1 = Parameter(9000, 1000, 30000, "N1")
-            self.N2 = Parameter(5000, 1000, 30000, "N2")
-            self.T1 = Parameter(2000, 1500, 5000, "T1")
-            self.T2 = Parameter(350, 100, 1500, "T2")
-            self.growth = Parameter(0.005, 0.0, 0.05, "growth")
-            self.reco = Parameter(1.25e-8, 1e-9, 1e-7, "reco")
-            self.mut = Parameter(1.25e-8, 1e-9, 1e-7, "mut")
+            param_set["N1"] = Parameter(9000, 1000, 30000, "N1")
+            param_set["N2"] = Parameter(5000, 1000, 30000, "N2")
+            param_set["T1"] = Parameter(2000, 1500, 5000, "T1")
+            param_set["T2"] = Parameter(350, 100, 1500, "T2")
+            param_set["growth"] = Parameter(0.005, 0.0, 0.05, "growth")
 
         # Isolation with Migration model
         elif simulator == simulation.im:
-            self.N1 = Parameter(9000, 1000, 30000, "N1")
-            self.N2 = Parameter(5000, 1000, 30000, "N2")
-            self.N_anc = Parameter(15000, 1000, 25000, "N_anc")
-            self.T_split = Parameter(2000, 500, 20000, "T_split")
-            self.mig = Parameter(0.05, -0.2, 0.2, "mig")
-            self.reco = Parameter(1.25e-8, 1e-9, 1e-7, "reco")
-            self.mut = Parameter(1.25e-8, 1e-9, 1e-7, "mut")
+            param_set["N1"] = Parameter(9000, 1000, 30000, "N1")
+            param_set["N2"] = Parameter(5000, 1000, 30000, "N2")
+            param_set["N_anc"] = Parameter(15000, 1000, 25000, "N_anc")
+            param_set["T_split"] = Parameter(2000, 500, 20000, "T_split")
+            param_set["mig"] = Parameter(0.05, -0.2, 0.2, "mig")
 
         # ooa2
         elif simulator == simulation.ooa2:
-            self.N1 = Parameter(9000, 1000, 30000, "N1")
-            self.N2 = Parameter(5000, 1000, 30000, "N2")
-            self.N3 = Parameter(12000, 1000, 30000, "N3")
-            self.N_anc = Parameter(15000, 1000, 25000, "N_anc")
-            self.T1 = Parameter(2000, 1500, 5000, "T1")
-            self.T2 = Parameter(350, 100, 1500, "T2")
-            self.mig = Parameter(0.05, -0.2, 0.2, "mig")
-            self.reco = Parameter(1.25e-8, 1e-9, 1e-7, "reco")
-            self.mut = Parameter(1.25e-8, 1e-9, 1e-7, "mut")
+            param_set["N1"] = Parameter(9000, 1000, 30000, "N1")
+            param_set["N2"] = Parameter(5000, 1000, 30000, "N2")
+            param_set["N3"] = Parameter(12000, 1000, 30000, "N3")
+            param_set["N_anc"] = Parameter(15000, 1000, 25000, "N_anc")
+            param_set["T1"] = Parameter(2000, 1500, 5000, "T1")
+            param_set["T2"] = Parameter(350, 100, 1500, "T2")
+            param_set["mig"] = Parameter(0.05, -0.2, 0.2, "mig")
 
         # post ooa
         elif simulator == simulation.post_ooa:
-            self.N1 = Parameter(9000, 1000, 30000, "N1")
-            self.N2 = Parameter(5000, 1000, 30000, "N2")
-            self.N3 = Parameter(12000, 1000, 30000, "N3")
-            self.N_anc = Parameter(15000, 1000, 25000, "N_anc")
-            self.T1 = Parameter(2000, 1500, 5000, "T1")
-            self.T2 = Parameter(350, 100, 1500, "T2")
-            self.mig = Parameter(0.05, -0.2, 0.2, "mig")
-            self.reco = Parameter(1.25e-8, 1e-9, 1e-7, "reco")
-            self.mut = Parameter(1.25e-8, 1e-9, 1e-7, "mut")
+            param_set["N1"] = Parameter(9000, 1000, 30000, "N1")
+            param_set["N2"] = Parameter(5000, 1000, 30000, "N2")
+            param_set["N3"] = Parameter(12000, 1000, 30000, "N3")
+            param_set["N_anc"] = Parameter(15000, 1000, 25000, "N_anc")
+            param_set["T1"] = Parameter(2000, 1500, 5000, "T1")
+            param_set["T2"] = Parameter(350, 100, 1500, "T2")
+            param_set["mig"] = Parameter(0.05, -0.2, 0.2, "mig")
 
         # ooa3 (dadi)
         elif simulator == simulation.ooa3:
-            self.N_A = Parameter(7300, 1000, 30000, "N_A")
-            self.N_B = Parameter(2100, 1000, 20000, "N_B")
-            self.N_AF = Parameter(12300, 1000, 40000, "N_AF")
-            self.N_EU0 = Parameter(1000, 100, 20000, "N_EU0")
-            self.N_AS0 = Parameter(510, 100, 20000, "N_AS0")
-            self.r_EU = Parameter(0.004, 0.0, 0.05, "r_EU")
-            self.r_AS = Parameter(0.0055, 0.0, 0.05, "r_AS")
-            self.T_AF = Parameter(8800, 8000, 15000, "T_AF")
-            self.T_B = Parameter(5600, 2000, 8000, "T_B")
-            self.T_EU_AS = Parameter(848, 100, 2000, "T_EU_AS")
-            self.m_AF_B = Parameter(25e-5, 0.0, 0.01, "m_AF_B")
-            self.m_AF_EU = Parameter(3e-5, 0.0,  0.01, "m_AF_EU")
-            self.m_AF_AS = Parameter(1.9e-5, 0.0, 0.01, "m_AF_AS")
-            self.m_EU_AS = Parameter(9.6e-5, 0.0, 0.01, "m_EU_AS")
-            self.reco = Parameter(1.25e-8, 1e-9, 1e-7, "reco")
-            self.mut = Parameter(1.25e-8, 1e-9, 1e-7, "mut")
+            param_set["N_A"] = Parameter(7300, 1000, 30000, "N_A")
+            param_set["N_B"] = Parameter(2100, 1000, 20000, "N_B")
+            param_set["N_AF"] = Parameter(12300, 1000, 40000, "N_AF")
+            param_set["N_EU0"] = Parameter(1000, 100, 20000, "N_EU0")
+            param_set["N_AS0"] = Parameter(510, 100, 20000, "N_AS0")
+            param_set["r_EU"] = Parameter(0.004, 0.0, 0.05, "r_EU")
+            param_set["r_AS"] = Parameter(0.0055, 0.0, 0.05, "r_AS")
+            param_set["T_AF"] = Parameter(8800, 8000, 15000, "T_AF")
+            param_set["T_B"] = Parameter(5600, 2000, 8000, "T_B")
+            param_set["T_EU_AS"] = Parameter(848, 100, 2000, "T_EU_AS")
+            param_set["m_AF_B"] = Parameter(25e-5, 0.0, 0.01, "m_AF_B")
+            param_set["m_AF_EU"] = Parameter(3e-5, 0.0,  0.01, "m_AF_EU")
+            param_set["m_AF_AS"] = Parameter(1.9e-5, 0.0, 0.01, "m_AF_AS")
+            param_set["m_EU_AS"] = Parameter(9.6e-5, 0.0, 0.01, "m_EU_AS")
 
         else:
             sys.exit(str(simulator) + " not supported")
 
-    def update(self, names, values):
-        """Based on generator proposal, update desired param values"""
-        assert len(names) == len(values)
+        if iterable_params == []:
+            params = param_set
+        else:
+            params = {}
+            names = param_set.keys()
+            for param_name in names:
+                if param_name in iterable_params:
+                    params[param_name] = param_set[param_name] # add to new set
 
-        for j in range(len(names)):
-            param = names[j]
+        self.iterable_params = iterable_params
+        self.param_set = params
+        self.simulator = simulator
 
-            # credit: Alex Pan (https://github.com/apanana/pg-gan)
-            attr = getattr(self, param)
-            if attr == None:
-                sys.exit(param + " is not a recognized parameter.")
-            else:
-                attr.value = values[j]
-                
+    def to_list(self):
+        if self.iterable_params == []:
+            param_range = self.param_set.keys()
+        else:
+            param_range = self.iterable_params
+
+        result = []
+        for param_name in param_range:
+            param = self.param_set[param_name]
+            result.append(param.value)
+        return result
+
+    def __str__(self):
+        return str(self.to_list())
+
+    def clone(self, start=False):
+        # make the object but reset it
+        new_param_set = ParamSet(self.simulator, self.iterable_params)
+
+        # copy over current values
+        for param_name in self.param_set:
+            new_param_set.param_set[param_name].value = \
+                new_param_set.param_set[param_name].start() if start \
+                else self.get(param_name)
+
+        return new_param_set
+
+    def propose_param(self, param_name, value, multiplier):
+        proposal = self.param_set[param_name].proposal(value, multiplier)
+        self.param_set[param_name].value = proposal
+
+    def proposal_all(self, multiplier, value_dict=None):
+        if value_dict is None:
+            value_dict = self.param_set
+
+        for key in self.param_set:
+            self.propose_param(key, value_dict.get(key), multiplier)
+
+    def update(self, iterable_params):
+        new_params = iterable_params.param_set
+
+        for key in new_params:
+            self.param_set[key] = new_params[key]
+
+    def get(self, param_name):
+        return self.param_set[param_name].value

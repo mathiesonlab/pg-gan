@@ -43,7 +43,7 @@ def main():
         np.random.seed(opts.seed)
         tf.random.set_seed(opts.seed)
 
-    generator, iterator, parameters, sample_sizes = util.process_opts(opts)
+    generator, iterator, iterable_params, sample_sizes = util.process_opts(opts)
     #disc = discriminator.MultiPopModel(sample_sizes)
     disc = get_discriminator(sample_sizes)
 
@@ -56,7 +56,7 @@ def main():
     # simulated annealing
     else:
         posterior, loss_lst = simulated_annealing(generator, disc,
-            iterator, parameters, opts.seed, toy=opts.toy)
+            iterator, iterable_params, opts.seed, toy=opts.toy)
 
     print(posterior)
     print(loss_lst)
@@ -65,25 +65,25 @@ def main():
 # SIMULATED ANNEALING
 ################################################################################
 
-def simulated_annealing(generator, disc, iterator, parameters, seed,
+def simulated_annealing(generator, disc, iterator, iterable_params, seed,
     toy=False):
     """Main function that drives GAN updates"""
 
     # main object for pg-gan
-    pg_gan = PG_GAN(generator, disc, iterator, parameters, seed)
+    pg_gan = PG_GAN(generator, disc, iterator, iterable_params, seed)
 
     # find starting point through pre-training (update generator in method)
     if not toy:
         s_current = pg_gan.disc_pretraining(800)
     else:
         pg_gan.disc_pretraining(1) # for testing purposes
-        s_current = [param.start() for param in pg_gan.parameters]
+        s_current = iterable_params.clone(start=True)
         pg_gan.generator.update_params(s_current)
 
     loss_curr = pg_gan.generator_loss(s_current)
     print("params, loss", s_current, loss_curr)
 
-    posterior = [s_current]
+    posterior = [s_current.to_list()]
     loss_lst = [loss_curr]
     real_acc_lst = []
     fake_acc_lst = []
@@ -94,6 +94,8 @@ def simulated_annealing(generator, disc, iterator, parameters, seed,
     if toy:
         num_iter = 2
 
+    s_current_set = s_current.param_set
+
     # main pg-gan loop
     for i in range(num_iter):
         print("\nITER", i)
@@ -103,21 +105,23 @@ def simulated_annealing(generator, disc, iterator, parameters, seed,
         # propose 10 updates per param and pick the best one
         s_best = None
         loss_best = float('inf')
-        for k in range(len(parameters)): # trying all params!
+
+        for param_name in s_current_set: # trying all params!
+            value = s_current_set[param_name].value
+            s_params = s_current.clone()
+
             #k = random.choice(range(len(parameters))) # random param
             for j in range(10): # trying 10
 
                 # can update all the parameters at once, or choose one at a time
-                #s_proposal = [parameters[k].proposal(s_current[k], T) for k in
-                #    range(len(parameters))]
-                s_proposal = [v for v in s_current] # copy
-                s_proposal[k] = parameters[k].proposal(s_current[k], T)
-                loss_proposal = pg_gan.generator_loss(s_proposal)
+                # s_params.proposal_all(multiplier=T, value_dict=parameters.param_set)
+                s_params.propose_param(param_name, value, T)
+                loss_proposal = pg_gan.generator_loss(s_params)
 
-                print(j, "proposal", s_proposal, loss_proposal)
+                print(j, "proposal", s_params, loss_proposal)
                 if loss_proposal < loss_best: # minimizing loss
                     loss_best = loss_proposal
-                    s_best = s_proposal
+                    s_best = s_params.clone()
 
         # decide whether to accept or not (reduce accepting bad state later on)
         if loss_best <= loss_curr: # unsure about this equal here
@@ -142,7 +146,7 @@ def simulated_annealing(generator, disc, iterator, parameters, seed,
 
         print("T, p_accept, rand, s_current, loss_curr", end=" ")
         print(T, p_accept, rand, s_current, loss_curr)
-        posterior.append(s_current)
+        posterior.append(s_current.to_list())
         loss_lst.append(loss_curr)
 
     return posterior, loss_lst
@@ -185,14 +189,14 @@ def grid_search(model_type, samples, demo_file, simulator, iterator, parameters,
 
 class PG_GAN:
 
-    def __init__(self, generator, disc, iterator, parameters, seed):
+    def __init__(self, generator, disc, iterator, iterable_params, seed):
         """Setup the model and training framework"""
 
         # set up generator and discriminator
         self.generator = generator
         self.discriminator = disc
         self.iterator = iterator # for training data (real or simulated)
-        self.parameters = parameters
+        self.iterable_params = iterable_params
 
         # this checks and prints the model (1 is for the batch size)
         self.discriminator.build_graph((1, iterator.num_samples,
@@ -210,7 +214,7 @@ class PG_GAN:
 
         # try with several random sets at first
         while max_acc < 0.9 and k < 10:
-            s_trial = [param.start() for param in self.parameters]
+            s_trial = self.iterable_params.clone(start=True)
             print("trial", k+1, s_trial)
             self.generator.update_params(s_trial)
             real_acc, fake_acc = self.train_sa(num_batches)

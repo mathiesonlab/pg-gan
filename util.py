@@ -12,23 +12,23 @@ import sys
 # our imports
 import generator
 import global_vars
-import param_set
+from param_set import ParamSet
 import real_data_random
 import simulation
 
 def parse_params(param_input, simulator):
     """See which params were desired for inference"""
     param_strs = param_input.split(',')
-    parameters = []
-    for _, p in vars(param_set.ParamSet(simulator)).items():
-        if p.name in param_strs:
-            parameters.append(p)
 
-    assert len(parameters) == len(param_strs)
-    for p in parameters:
+    # removes non-iterable params, adds back in for sim
+    iterable_params = ParamSet(simulator, iterable_params=param_strs)
+
+    params = iterable_params.param_set.values()
+    assert len(params) == len(param_strs)
+    for p in params:
         print(p)
 
-    return parameters
+    return iterable_params
 
 def filter_func(x, rate): # currently not used
     """Keep non-singletons. If singleton, filter at given rate"""
@@ -306,19 +306,19 @@ def process_opts(opts, summary_stats = False):
         print("FILTERING SINGLETONS")
 
     # parameter defaults
-    parameters = parse_params(opts.params, simulator) # desired params
-    param_names = [p.name for p in parameters]
+    iterable_params = parse_params(opts.params, simulator) # DICTIONARY of params to iterator over
 
     # generator
-    gen = generator.Generator(simulator, param_names, sample_sizes,
+    gen = generator.Generator(simulator, iterable_params, sample_sizes,
         opts.seed, mirror_real=real, reco_folder=opts.reco_folder)
 
     if opts.data_h5 is None:
+        params = ParamSet(simulator, iterable_params=[]) # keep all params
         # "real data" is simulated with fixed params
-        iterator = generator.Generator(simulator, param_names, sample_sizes,
+        iterator = generator.Generator(simulator, params, sample_sizes,
             opts.seed) # don't need reco_folder
 
-    return gen, iterator, parameters, sample_sizes # last used for disc.
+    return gen, iterator, iterable_params, sample_sizes # last used for disc.
 
 if __name__ == "__main__":
     # test major/minor and post-processing
