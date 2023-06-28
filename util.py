@@ -25,8 +25,7 @@ def parse_params(param_input, simulator):
 
     params = iterable_params.param_set.values()
     assert len(params) == len(param_strs)
-    for p in params:
-        print(p)
+    print(iterable_params)
 
     return iterable_params
 

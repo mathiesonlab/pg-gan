@@ -81,7 +81,7 @@ def simulated_annealing(generator, disc, iterator, iterable_params, seed,
         pg_gan.generator.update_params(s_current)
 
     loss_curr = pg_gan.generator_loss(s_current)
-    print("params, loss", s_current, loss_curr)
+    print("params, loss", s_current.to_list(), loss_curr)
 
     posterior = [s_current.to_list()]
     loss_lst = [loss_curr]
@@ -118,7 +118,7 @@ def simulated_annealing(generator, disc, iterator, iterable_params, seed,
                 s_proposal.propose_param(param_name, value, T)
                 loss_proposal = pg_gan.generator_loss(s_proposal)
 
-                print(j, "proposal", s_proposal, loss_proposal)
+                print(j, "proposal", s_proposal.to_list(), loss_proposal)
                 if loss_proposal < loss_best: # minimizing loss
                     loss_best = loss_proposal
                     s_best = s_proposal.clone()
@@ -145,7 +145,7 @@ def simulated_annealing(generator, disc, iterator, iterable_params, seed,
             print("NOT ACCEPTED")
 
         print("T, p_accept, rand, s_current, loss_curr", end=" ")
-        print(T, p_accept, rand, s_current, loss_curr)
+        print(T, p_accept, rand, s_current.to_list(), loss_curr)
         posterior.append(s_current.to_list())
         loss_lst.append(loss_curr)
 
