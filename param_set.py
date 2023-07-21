@@ -19,18 +19,11 @@ class Parameter:
     that parameter is not inferred, or the truth when training data is simulated
     """
 
-    def __init__(self, value, min, max, name):
+    def __init__(self, value, min, max):
         self.value = value
         self.min = min
         self.max = max
-        self.name = name
         self.proposal_width = (self.max - self.min)/15 # heuristic
-
-    def __str__(self):
-        s = '\t'.join(["NAME", "VALUE", "MIN", "MAX"]) + '\n'
-        s += '\t'.join([str(self.name), str(self.value), str(self.min),
-            str(self.max)])
-        return s
 
     def start(self):
         # random initialization
@@ -76,65 +69,65 @@ class ParamSet:
         """Takes in a simulator to determine which params are needed"""
 
         param_set = {}
-        param_set["reco"] = Parameter(1.25e-8, 1e-9, 1e-7, "reco")
-        param_set["mut"] = Parameter(1.25e-8, 1e-9, 1e-7, "mut")
+        param_set["reco"] = Parameter(1.25e-8, 1e-9, 1e-7)
+        param_set["mut"] = Parameter(1.25e-8, 1e-9, 1e-7)
 
         # constant population size
         if simulator == simulation.const:
-            param_set["Ne"] = Parameter(10000, 1000, 30000, "Ne")
+            param_set["Ne"] = Parameter(10000, 1000, 30000)
 
         # exponential growth model
         elif simulator == simulation.exp:
-            param_set["N1"] = Parameter(9000, 1000, 30000, "N1")
-            param_set["N2"] = Parameter(5000, 1000, 30000, "N2")
-            param_set["T1"] = Parameter(2000, 1500, 5000, "T1")
-            param_set["T2"] = Parameter(350, 100, 1500, "T2")
-            param_set["growth"] = Parameter(0.005, 0.0, 0.05, "growth")
+            param_set["N1"] = Parameter(9000, 1000, 30000)
+            param_set["N2"] = Parameter(5000, 1000, 30000)
+            param_set["T1"] = Parameter(2000, 1500, 5000)
+            param_set["T2"] = Parameter(350, 100, 1500)
+            param_set["growth"] = Parameter(0.005, 0.0, 0.05)
 
         # Isolation with Migration model
         elif simulator == simulation.im:
-            param_set["N1"] = Parameter(9000, 1000, 30000, "N1")
-            param_set["N2"] = Parameter(5000, 1000, 30000, "N2")
-            param_set["N_anc"] = Parameter(15000, 1000, 25000, "N_anc")
-            param_set["T_split"] = Parameter(2000, 500, 20000, "T_split")
-            param_set["mig"] = Parameter(0.05, -0.2, 0.2, "mig")
+            param_set["N1"] = Parameter(9000, 1000, 30000)
+            param_set["N2"] = Parameter(5000, 1000, 30000)
+            param_set["N_anc"] = Parameter(15000, 1000, 25000)
+            param_set["T_split"] = Parameter(2000, 500, 20000)
+            param_set["mig"] = Parameter(0.05, -0.2, 0.2)
 
         # ooa2
         elif simulator == simulation.ooa2:
-            param_set["N1"] = Parameter(9000, 1000, 30000, "N1")
-            param_set["N2"] = Parameter(5000, 1000, 30000, "N2")
-            param_set["N3"] = Parameter(12000, 1000, 30000, "N3")
-            param_set["N_anc"] = Parameter(15000, 1000, 25000, "N_anc")
-            param_set["T1"] = Parameter(2000, 1500, 5000, "T1")
-            param_set["T2"] = Parameter(350, 100, 1500, "T2")
-            param_set["mig"] = Parameter(0.05, -0.2, 0.2, "mig")
+            param_set["N1"] = Parameter(9000, 1000, 30000)
+            param_set["N2"] = Parameter(5000, 1000, 30000)
+            param_set["N3"] = Parameter(12000, 1000, 30000)
+            param_set["N_anc"] = Parameter(15000, 1000, 25000)
+            param_set["T1"] = Parameter(2000, 1500, 5000)
+            param_set["T2"] = Parameter(350, 100, 1500)
+            param_set["mig"] = Parameter(0.05, -0.2, 0.2)
 
         # post ooa
         elif simulator == simulation.post_ooa:
-            param_set["N1"] = Parameter(9000, 1000, 30000, "N1")
-            param_set["N2"] = Parameter(5000, 1000, 30000, "N2")
-            param_set["N3"] = Parameter(12000, 1000, 30000, "N3")
-            param_set["N_anc"] = Parameter(15000, 1000, 25000, "N_anc")
-            param_set["T1"] = Parameter(2000, 1500, 5000, "T1")
-            param_set["T2"] = Parameter(350, 100, 1500, "T2")
-            param_set["mig"] = Parameter(0.05, -0.2, 0.2, "mig")
+            param_set["N1"] = Parameter(9000, 1000, 30000)
+            param_set["N2"] = Parameter(5000, 1000, 30000)
+            param_set["N3"] = Parameter(12000, 1000, 30000)
+            param_set["N_anc"] = Parameter(15000, 1000, 25000)
+            param_set["T1"] = Parameter(2000, 1500, 5000)
+            param_set["T2"] = Parameter(350, 100, 1500)
+            param_set["mig"] = Parameter(0.05, -0.2, 0.2)
 
         # ooa3 (dadi)
         elif simulator == simulation.ooa3:
-            param_set["N_A"] = Parameter(7300, 1000, 30000, "N_A")
-            param_set["N_B"] = Parameter(2100, 1000, 20000, "N_B")
-            param_set["N_AF"] = Parameter(12300, 1000, 40000, "N_AF")
-            param_set["N_EU0"] = Parameter(1000, 100, 20000, "N_EU0")
-            param_set["N_AS0"] = Parameter(510, 100, 20000, "N_AS0")
-            param_set["r_EU"] = Parameter(0.004, 0.0, 0.05, "r_EU")
-            param_set["r_AS"] = Parameter(0.0055, 0.0, 0.05, "r_AS")
-            param_set["T_AF"] = Parameter(8800, 8000, 15000, "T_AF")
-            param_set["T_B"] = Parameter(5600, 2000, 8000, "T_B")
-            param_set["T_EU_AS"] = Parameter(848, 100, 2000, "T_EU_AS")
-            param_set["m_AF_B"] = Parameter(25e-5, 0.0, 0.01, "m_AF_B")
-            param_set["m_AF_EU"] = Parameter(3e-5, 0.0,  0.01, "m_AF_EU")
-            param_set["m_AF_AS"] = Parameter(1.9e-5, 0.0, 0.01, "m_AF_AS")
-            param_set["m_EU_AS"] = Parameter(9.6e-5, 0.0, 0.01, "m_EU_AS")
+            param_set["N_A"] = Parameter(7300, 1000, 30000)
+            param_set["N_B"] = Parameter(2100, 1000, 20000)
+            param_set["N_AF"] = Parameter(12300, 1000, 40000)
+            param_set["N_EU0"] = Parameter(1000, 100, 20000)
+            param_set["N_AS0"] = Parameter(510, 100, 20000)
+            param_set["r_EU"] = Parameter(0.004, 0.0, 0.05)
+            param_set["r_AS"] = Parameter(0.0055, 0.0, 0.05)
+            param_set["T_AF"] = Parameter(8800, 8000, 15000)
+            param_set["T_B"] = Parameter(5600, 2000, 8000)
+            param_set["T_EU_AS"] = Parameter(848, 100, 2000)
+            param_set["m_AF_B"] = Parameter(25e-5, 0.0, 0.01)
+            param_set["m_AF_EU"] = Parameter(3e-5, 0.0,  0.01)
+            param_set["m_AF_AS"] = Parameter(1.9e-5, 0.0, 0.01)
+            param_set["m_EU_AS"] = Parameter(9.6e-5, 0.0, 0.01)
 
         else:
             sys.exit(str(simulator) + " not supported")
@@ -165,7 +158,17 @@ class ParamSet:
         return result
 
     def __str__(self):
-        return str(self.to_list())
+        if self.iterable_params == []:
+            param_range = self.param_set.keys()
+        else:
+            param_range = self.iterable_params
+
+        s = '\t'.join(["NAME", "VALUE", "MIN", "MAX"]) + '\n'
+        for param_name in param_range:
+            param = self.param_set[param_name]
+            s += '\t'.join([param_name, str(param.value), str(param.min), \
+                str(param.max)])
+        return s
 
     def clone(self, start=False):
         # make the object but reset it
