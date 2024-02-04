@@ -167,7 +167,7 @@ class ParamSet:
         for param_name in param_range:
             param = self.param_set[param_name]
             s += '\t'.join([param_name, str(param.value), str(param.min), \
-                str(param.max)])
+                str(param.max)]) + '\n'
         return s
 
     def clone(self, start=False):
