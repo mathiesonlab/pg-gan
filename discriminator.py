@@ -9,7 +9,13 @@ import tensorflow as tf
 
 from tensorflow.keras.layers import Dense, Flatten, Conv1D, Conv2D, \
     MaxPooling2D, AveragePooling1D, Dropout, Concatenate
-from tensorflow.keras import Model
+from tensorflow.keras import Model, Layer
+
+class ReduceSum(Layer):
+    # 1/14/26: updated for later versions of tensorflow
+
+    def call(self, x):
+        return tf.math.reduce_sum(x, axis=1)
 
 class OnePopModel(Model):
     """Single population model - based on defiNETti software."""
@@ -42,7 +48,7 @@ class OnePopModel(Model):
         # note axis is 1 b/c first axis is batch
         # can try max or sum as the permutation-invariant function
         #x = tf.math.reduce_max(x, axis=1)
-        x = tf.math.reduce_sum(x, axis=1)
+        x = ReduceSum()(x)
 
         x = self.flatten(x)
         x = self.fc1(x)
@@ -108,8 +114,8 @@ class TwoPopModel(Model):
         # can try max or sum as the permutation-invariant function
         #x_pop1_max = tf.math.reduce_max(x_pop1, axis=1)
         #x_pop2_max = tf.math.reduce_max(x_pop2, axis=1)
-        x_pop1_sum = tf.math.reduce_sum(x_pop1, axis=1)
-        x_pop2_sum = tf.math.reduce_sum(x_pop2, axis=1)
+        x_pop1_sum = ReduceSum()(x_pop1)
+        x_pop2_sum = ReduceSum()(x_pop2)
 
         # flatten all
         #x_pop1_max = self.flatten(x_pop1_max)
@@ -185,9 +191,9 @@ class ThreePopModel(Model):
         x_pop3 = self.pool(x_pop3) # pool
 
         # 1 is the dimension of the individuals
-        x_pop1 = tf.math.reduce_sum(x_pop1, axis=1)
-        x_pop2 = tf.math.reduce_sum(x_pop2, axis=1)
-        x_pop3 = tf.math.reduce_sum(x_pop3, axis=1)
+        x_pop1 = ReduceSum()(x_pop1)
+        x_pop2 = ReduceSum()(x_pop2)
+        x_pop3 = ReduceSum()(x_pop3)
 
         # flatten all
         x_pop1 = self.flatten(x_pop1)
